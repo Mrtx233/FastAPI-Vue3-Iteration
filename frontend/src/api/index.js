@@ -6,14 +6,13 @@ const api = axios.create({
   timeout: 10000,
 })
 
-// 响应拦截器：自动解密整个响应体
+// 响应拦截器：自动解密
 api.interceptors.response.use(
   (response) => {
     const body = response.data
     if (body && typeof body.data === 'string') {
       try {
-        const decrypted = decrypt(body.data)
-        response.data = JSON.parse(decrypted)
+        response.data = JSON.parse(decrypt(body.data))
       } catch (e) {
         console.error('响应解密失败:', e)
       }
@@ -23,32 +22,32 @@ api.interceptors.response.use(
   (error) => Promise.reject(error)
 )
 
-// ---------- 用户接口 ----------
+// ---------- 系统管理 ----------
+export const getPermissions = () => api.get('/api/system/permissions')
+export const getRoles = () => api.get('/api/system/roles')
+export const getRolePermissions = () => api.get('/api/system/role-permissions')
+export const getUsers = () => api.get('/api/system/users')
+export const getUserProfiles = () => api.get('/api/system/user-profiles')
 
-export function getUsers(page = 1, pageSize = 10) {
-  return api.get('/api/users', { params: { page, page_size: pageSize } })
-}
+// ---------- 门店管理 ----------
+export const getProvinces = () => api.get('/api/stores/provinces')
+export const getStores = () => api.get('/api/stores/')
+export const getUserStores = () => api.get('/api/stores/user-stores')
 
-export function getUserById(id) {
-  return api.get(`/api/users/${id}`)
-}
+// ---------- 课程管理 ----------
+export const getCourseCategories = () => api.get('/api/courses/categories')
+export const getCourses = () => api.get('/api/courses/')
+export const getCourseFavorites = () => api.get('/api/courses/favorites')
 
-export function createUser(data) {
-  return api.post('/api/users', data)
-}
+// ---------- 动作库 ----------
+export const getActionCategories = () => api.get('/api/actions/categories')
+export const getActions = () => api.get('/api/actions/')
+export const getActionFavorites = () => api.get('/api/actions/favorites')
 
-export function updateUser(id, data) {
-  return api.put(`/api/users/${id}`, data)
-}
+// ---------- 标语 ----------
+export const getSlogans = () => api.get('/api/slogans/')
 
-export function deleteUser(id) {
-  return api.delete(`/api/users/${id}`)
-}
-
-// ---------- 登录接口 ----------
-
-export function login(data) {
-  return api.post('/api/users/login', data)
-}
+// ---------- 赛事活动 ----------
+export const getActivities = () => api.get('/api/activities/')
 
 export default api

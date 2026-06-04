@@ -3,10 +3,25 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import engine
-from app.middleware import EncryptResponseMiddleware
-from app.models import Base
-from app.routers import user
+from app.core.database import engine
+from app.core.middleware import EncryptResponseMiddleware
+from app.modules import Base
+
+# 导入所有模块的 models，确保 create_all 能识别全部表
+from app.modules.system import models as _sys_models  # noqa: F401
+from app.modules.slogan import models as _slogan_models  # noqa: F401
+from app.modules.activity import models as _activity_models  # noqa: F401
+from app.modules.store import models as _store_models  # noqa: F401
+from app.modules.course import models as _course_models  # noqa: F401
+from app.modules.action import models as _action_models  # noqa: F401
+
+# 导入所有路由
+from app.modules.system.router import router as system_router
+from app.modules.slogan.router import router as slogan_router
+from app.modules.activity.router import router as activity_router
+from app.modules.store.router import router as store_router
+from app.modules.course.router import router as course_router
+from app.modules.action.router import router as action_router
 
 
 @asynccontextmanager
@@ -16,7 +31,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="FastAPI CRUD", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Fitness Management API", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(EncryptResponseMiddleware)
 app.add_middleware(
@@ -27,4 +42,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(user.router)
+app.include_router(system_router)
+app.include_router(slogan_router)
+app.include_router(activity_router)
+app.include_router(store_router)
+app.include_router(course_router)
+app.include_router(action_router)
