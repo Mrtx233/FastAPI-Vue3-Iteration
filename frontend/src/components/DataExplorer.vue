@@ -213,7 +213,7 @@ async function handleSearchById() {
     emptyText.value = '未找到该记录'
   } catch (e) {
     tableData.value = []
-    const detail = e.response?.data?.detail || '查询失败'
+    const detail = e.response?.data?.detail || e.message || '查询失败'
     ElMessage.error(detail)
   } finally {
     loading.value = false

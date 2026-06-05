@@ -135,16 +135,8 @@ export const getActionFavorites = () => api.get('/api/actions/favorites')
 
 // ---------- 标语 ----------
 export const getSlogans = () => api.get('/api/slogans/')
-export const getSloganById = (id) => api.get(`/api/slogans/${id}`)
-export const createSlogan = (data) => api.post('/api/slogans/', data)
-export const updateSlogan = (id, data) => api.put(`/api/slogans/${id}`, data)
-export const deleteSlogan = (id) => api.delete(`/api/slogans/${id}`)
 
 // ---------- 赛事活动 ----------
 export const getActivities = () => api.get('/api/activities/')
-export const getActivityById = (id) => api.get(`/api/activities/${id}`)
-export const createActivity = (data) => api.post('/api/activities/', data)
-export const updateActivity = (id, data) => api.put(`/api/activities/${id}`, data)
-export const deleteActivity = (id) => api.delete(`/api/activities/${id}`)
 
 export default api

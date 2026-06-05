@@ -16,13 +16,24 @@ const menuGroups = [
   {
     key: 'course', label: '课程',
     children: [
+      { key: 'course_categories', label: '课程分类' },
       { key: 'courses', label: '课程列表' },
+      { key: 'course_favorites', label: '我的收藏' },
     ],
   },
   {
     key: 'action', label: '动作库',
     children: [
+      { key: 'action_categories', label: '动作分类' },
       { key: 'actions', label: '动作列表' },
+      { key: 'action_favorites', label: '我的收藏' },
+    ],
+  },
+  {
+    key: 'content', label: '内容',
+    children: [
+      { key: 'slogans', label: '标语' },
+      { key: 'activities', label: '赛事活动' },
     ],
   },
 ]

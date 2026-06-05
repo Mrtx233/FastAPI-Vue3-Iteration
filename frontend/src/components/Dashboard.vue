@@ -93,25 +93,42 @@ onMounted(async () => {
   }
 })
 
-// 用户/用户档案的智能获取（会员自动回退到查看自己）
+// 判断当前用户是否有 user:list 权限（超管 role_id=1 / 运营 role_id=2）
+const hasUserListPerm = () => {
+  const role = currentUser.value?.role_id
+  return role === 1 || role === 2
+}
+
+// 各角色可执行 CRUD 的表（超管拥有全部，运营同超管但不可删除用户）
+const roleManageMap = {
+  1: null, // 超级管理员：全部可管理
+  2: null,
+  3: new Set([]), // 教练：系统表只读
+  4: new Set([]), // 会员：全部只读
+}
+
+const canManageTable = (tableKey) => {
+  const roleId = currentUser.value?.role_id
+  if (!roleId) return false
+  const allowed = roleManageMap[roleId]
+  return allowed === null || allowed.has(tableKey) // null = 全部可管理
+}
+
+// 用户/用户档案的智能获取（按权限直接选择请求方式，避免产生 403）
 const fetchUsersSmart = () => {
-  return api.getUsers({ silent403: true }).catch(async (e) => {
-    if (e.response?.status === 403 && currentUser.value) {
-      const res = await api.getUserById(currentUser.value.user_id)
-      return { data: [res.data] }
-    }
-    throw e
-  })
+  if (hasUserListPerm()) {
+    return api.getUsers()
+  }
+  // 教练 / 会员：直接查看自己
+  return api.getUserById(currentUser.value.user_id).then(res => ({ data: [res.data] }))
 }
 
 const fetchProfilesSmart = () => {
-  return api.getUserProfiles({ silent403: true }).catch(async (e) => {
-    if (e.response?.status === 403 && currentUser.value) {
-      const res = await api.getUserProfileByUserId(currentUser.value.user_id)
-      return { data: [res.data] }
-    }
-    throw e
-  })
+  if (hasUserListPerm()) {
+    return api.getUserProfiles()
+  }
+  // 教练 / 会员：直接查看自己的档案
+  return api.getUserProfileByUserId(currentUser.value.user_id).then(res => ({ data: [res.data] }))
 }
 
 // 全部表格配置
@@ -187,7 +204,12 @@ const tableConfig = computed(() => ({
     label: '用户 (sys_user)',
     fetchFn: fetchUsersSmart,
     idProp: 'user_id',
-    getByIdFn: (id) => api.getUserById(id),
+    getByIdFn: (id) => {
+      if (!hasUserListPerm() && currentUser.value && Number(id) !== currentUser.value.user_id) {
+        return Promise.reject(new Error('您只能查看自己的信息'))
+      }
+      return api.getUserById(id)
+    },
     idSearchLabel: '输入用户 ID 查询',
     columns: [
       { prop: 'user_id', label: 'ID', width: 80 },
@@ -198,9 +220,9 @@ const tableConfig = computed(() => ({
       { prop: 'phone', label: '手机号' },
       { prop: 'status', label: '状态', width: 80 },
     ],
-    createFn: (data) => api.createUser(data),
-    updateFn: (id, data) => api.updateUser(id, data),
-    deleteFn: props.canDeleteUser ? ((id) => api.deleteUser(id)) : null,
+    createFn: canManageTable('users') ? ((data) => api.createUser(data)) : null,
+    updateFn: canManageTable('users') ? ((id, data) => api.updateUser(id, data)) : null,
+    deleteFn: (canManageTable('users') && props.canDeleteUser) ? ((id) => api.deleteUser(id)) : null,
     createFields: [
       { prop: 'role_id', label: '角色', type: 'select', required: true, options: roleOptions.value },
       { prop: 'username', label: '用户名', required: true },
@@ -222,7 +244,12 @@ const tableConfig = computed(() => ({
     label: '用户档案 (sys_user_profile)',
     fetchFn: fetchProfilesSmart,
     idProp: 'profile_id',
-    getByIdFn: (id) => api.getUserProfileByUserId(id),
+    getByIdFn: (id) => {
+      if (!hasUserListPerm() && currentUser.value && Number(id) !== currentUser.value.user_id) {
+        return Promise.reject(new Error('您只能查看自己的档案'))
+      }
+      return api.getUserProfileByUserId(id)
+    },
     idSearchLabel: '输入用户 ID 查询',
     columns: [
       { prop: 'profile_id', label: 'ID', width: 80 },
@@ -238,9 +265,9 @@ const tableConfig = computed(() => ({
       { prop: 'join_time', label: '入职时间' },
       { prop: 'expire_date', label: '到期日期' },
     ],
-    createFn: (data) => api.createUserProfile(data),
-    updateFn: (id, data) => api.updateUserProfile(id, data),
-    deleteFn: props.canDeleteUser ? ((id) => api.deleteUserProfile(id)) : null,
+    createFn: canManageTable('user_profiles') ? ((data) => api.createUserProfile(data)) : null,
+    updateFn: canManageTable('user_profiles') ? ((id, data) => api.updateUserProfile(id, data)) : null,
+    deleteFn: (canManageTable('user_profiles') && props.canDeleteUser) ? ((id) => api.deleteUserProfile(id)) : null,
     createFields: [
       { prop: 'user_id', label: '用户', type: 'select', required: true, options: userOptions.value },
       { prop: 'level', label: '等级', type: 'number', min: 0, max: 100 },
@@ -377,9 +404,6 @@ const tableConfig = computed(() => ({
   slogans: {
     label: '标语 (t_slogan_info)',
     fetchFn: api.getSlogans,
-    idProp: 'slogan_id',
-    getByIdFn: (id) => api.getSloganById(id),
-    idSearchLabel: '输入标语 ID 查询',
     columns: [
       { prop: 'slogan_id', label: 'ID', width: 80 },
       { prop: 'slogan_name', label: '标语名称' },
@@ -387,28 +411,10 @@ const tableConfig = computed(() => ({
       { prop: 'slogan_image_url', label: '图片URL', width: 200 },
       { prop: 'status', label: '状态', width: 70 },
     ],
-    createFn: (data) => api.createSlogan(data),
-    updateFn: (id, data) => api.updateSlogan(id, data),
-    deleteFn: (id) => api.deleteSlogan(id),
-    createFields: [
-      { prop: 'slogan_name', label: '标语名称', required: true },
-      { prop: 'slogan_content', label: '标语内容', type: 'textarea', required: true },
-      { prop: 'slogan_image_url', label: '图片URL' },
-      { prop: 'status', label: '状态', type: 'select', default: 1, options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
-    ],
-    editFields: [
-      { prop: 'slogan_name', label: '标语名称' },
-      { prop: 'slogan_content', label: '标语内容', type: 'textarea' },
-      { prop: 'slogan_image_url', label: '图片URL' },
-      { prop: 'status', label: '状态', type: 'select', options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
-    ],
   },
   activities: {
     label: '赛事活动 (t_activity_event)',
     fetchFn: api.getActivities,
-    idProp: 'event_id',
-    getByIdFn: (id) => api.getActivityById(id),
-    idSearchLabel: '输入活动 ID 查询',
     columns: [
       { prop: 'event_id', label: 'ID', width: 80 },
       { prop: 'title', label: '标题' },
@@ -420,29 +426,6 @@ const tableConfig = computed(() => ({
       { prop: 'prize', label: '奖金/奖品' },
       { prop: 'scale', label: '规模' },
       { prop: 'created_at', label: '创建时间' },
-    ],
-    createFn: (data) => api.createActivity(data),
-    updateFn: (id, data) => api.updateActivity(id, data),
-    deleteFn: (id) => api.deleteActivity(id),
-    createFields: [
-      { prop: 'title', label: '标题', required: true },
-      { prop: 'event_date', label: '赛事日期', type: 'date', required: true },
-      { prop: 'location', label: '地点', required: true },
-      { prop: 'status', label: '状态', type: 'select', default: '预告', options: [{ label: '预告', value: '预告' }, { label: '早鸟票', value: '早鸟票' }, { label: '报名中', value: '报名中' }, { label: '进行中', value: '进行中' }, { label: '已结束', value: '已结束' }] },
-      { prop: 'description', label: '描述', type: 'textarea', required: true },
-      { prop: 'tags', label: '标签(逗号分隔)' },
-      { prop: 'prize', label: '奖金/奖品' },
-      { prop: 'scale', label: '规模' },
-    ],
-    editFields: [
-      { prop: 'title', label: '标题' },
-      { prop: 'event_date', label: '赛事日期', type: 'date' },
-      { prop: 'location', label: '地点' },
-      { prop: 'status', label: '状态', type: 'select', options: [{ label: '预告', value: '预告' }, { label: '早鸟票', value: '早鸟票' }, { label: '报名中', value: '报名中' }, { label: '进行中', value: '进行中' }, { label: '已结束', value: '已结束' }] },
-      { prop: 'description', label: '描述', type: 'textarea' },
-      { prop: 'tags', label: '标签(逗号分隔)' },
-      { prop: 'prize', label: '奖金/奖品' },
-      { prop: 'scale', label: '规模' },
     ],
   },
 }))
