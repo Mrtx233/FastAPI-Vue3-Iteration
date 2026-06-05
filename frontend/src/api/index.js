@@ -22,6 +22,26 @@ export function clearToken() {
   setToken('')
 }
 
+// 从 JWT 中获取角色 ID
+export function getRoleFromToken() {
+  try {
+    if (!token) return null
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.role_id
+  } catch { return null }
+}
+
+// 根据角色 ID 返回对应路由名
+export function getRouteByRole(roleId) {
+  switch (roleId) {
+    case 1: return 'Admin'
+    case 2: return 'Operator'
+    case 3: return 'Coach'
+    case 4: return 'Member'
+    default: return 'Login'
+  }
+}
+
 const api = axios.create({
   baseURL: 'http://localhost:8001',
   timeout: 10000,

@@ -38,10 +38,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, shallowRef } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import DataExplorer from '../components/DataExplorer.vue'
 import * as api from '../api'
 import { getToken } from '../api'
+
+const props = defineProps({
+  menuGroups: { type: Array, required: true },
+  canDeleteUser: { type: Boolean, default: true },
+  loadDropdowns: { type: Boolean, default: false },
+})
 
 // 从 JWT 中提取用户信息
 function decodeJwtPayload() {
@@ -59,8 +65,13 @@ const permOptions = ref([])
 const userOptions = ref([])
 const currentUser = ref(null)
 
+// 判断当前页面是否需要加载系统下拉选项（仅超管/运营需要）
+
 onMounted(async () => {
   currentUser.value = decodeJwtPayload()
+
+  // 教练和会员页面不需要加载角色/权限/用户下拉选项
+  if (!props.loadDropdowns) return
 
   try {
     const [rolesRes, permsRes, usersRes] = await Promise.allSettled([
@@ -103,57 +114,7 @@ const fetchProfilesSmart = () => {
   })
 }
 
-// 菜单分组定义
-const menuGroups = [
-  {
-    key: 'system',
-    label: '系统管理',
-    children: [
-      { key: 'permissions', label: '权限定义' },
-      { key: 'roles', label: '角色' },
-      { key: 'role_permissions', label: '角色权限' },
-      { key: 'users', label: '用户' },
-      { key: 'user_profiles', label: '用户档案' },
-    ],
-  },
-  {
-    key: 'store',
-    label: '门店管理',
-    children: [
-      { key: 'provinces', label: '省份区域' },
-      { key: 'stores', label: '门店信息' },
-      { key: 'user_stores', label: '用户门店' },
-    ],
-  },
-  {
-    key: 'course',
-    label: '课程管理',
-    children: [
-      { key: 'course_categories', label: '课程分类' },
-      { key: 'courses', label: '课程' },
-      { key: 'course_favorites', label: '课程收藏' },
-    ],
-  },
-  {
-    key: 'action',
-    label: '动作库',
-    children: [
-      { key: 'action_categories', label: '动作分类' },
-      { key: 'actions', label: '动作' },
-      { key: 'action_favorites', label: '动作收藏' },
-    ],
-  },
-  {
-    key: 'content',
-    label: '内容管理',
-    children: [
-      { key: 'slogans', label: '标语' },
-      { key: 'activities', label: '赛事活动' },
-    ],
-  },
-]
-
-// 每个 key 对应的 API 和列定义
+// 全部表格配置
 const tableConfig = computed(() => ({
   // ========== 系统管理 ==========
   permissions: {
@@ -239,7 +200,7 @@ const tableConfig = computed(() => ({
     ],
     createFn: (data) => api.createUser(data),
     updateFn: (id, data) => api.updateUser(id, data),
-    deleteFn: (id) => api.deleteUser(id),
+    deleteFn: props.canDeleteUser ? ((id) => api.deleteUser(id)) : null,
     createFields: [
       { prop: 'role_id', label: '角色', type: 'select', required: true, options: roleOptions.value },
       { prop: 'username', label: '用户名', required: true },
@@ -279,7 +240,7 @@ const tableConfig = computed(() => ({
     ],
     createFn: (data) => api.createUserProfile(data),
     updateFn: (id, data) => api.updateUserProfile(id, data),
-    deleteFn: (id) => api.deleteUserProfile(id),
+    deleteFn: props.canDeleteUser ? ((id) => api.deleteUserProfile(id)) : null,
     createFields: [
       { prop: 'user_id', label: '用户', type: 'select', required: true, options: userOptions.value },
       { prop: 'level', label: '等级', type: 'number', min: 0, max: 100 },

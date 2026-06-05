@@ -44,7 +44,8 @@
         </el-form-item>
       </el-form>
       <div class="login-hint">
-        测试账号：admin / admin123
+        <div>测试账号：admin / admin123（超管）</div>
+        <div>operator / oper123（运营）· coach_w / coach123（教练）· member_w / member123（会员）</div>
       </div>
     </el-card>
   </div>
@@ -54,7 +55,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { login, setToken } from '../api'
+import { login, setToken, getRouteByRole } from '../api'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -79,7 +80,7 @@ async function handleLogin() {
     const { data } = await login(form.username, form.password)
     setToken(data.access_token)
     ElMessage.success(`欢迎, ${data.username}`)
-    router.push('/')
+    router.push({ name: getRouteByRole(data.role_id) })
   } catch (e) {
     const msg = e.response?.data?.detail || '登录失败'
     ElMessage.error(msg)

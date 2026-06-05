@@ -59,7 +59,7 @@ function handleCommand(cmd) {
   if (cmd === 'logout') {
     clearToken()
     userInfo.value = null
-    router.push('/login')
+    router.push({ name: 'Login' })
   }
 }
 </script>
