@@ -21,6 +21,14 @@
         <DataExplorer
           :fetch-fn="activeConfig.fetchFn"
           :columns="activeConfig.columns"
+          :create-fn="activeConfig.createFn"
+          :update-fn="activeConfig.updateFn"
+          :delete-fn="activeConfig.deleteFn"
+          :get-by-id-fn="activeConfig.getByIdFn"
+          :id-search-label="activeConfig.idSearchLabel"
+          :create-fields="activeConfig.createFields"
+          :edit-fields="activeConfig.editFields"
+          :id-prop="activeConfig.idProp"
           :key="activeKey"
         />
       </template>
@@ -30,9 +38,70 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, shallowRef } from 'vue'
 import DataExplorer from '../components/DataExplorer.vue'
 import * as api from '../api'
+import { getToken } from '../api'
+
+// 从 JWT 中提取用户信息
+function decodeJwtPayload() {
+  try {
+    const token = getToken()
+    if (!token) return null
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return { user_id: parseInt(payload.sub), role_id: payload.role_id, username: payload.username }
+  } catch { return null }
+}
+
+// 缓存角色和权限列表（用于下拉选择）
+const roleOptions = ref([])
+const permOptions = ref([])
+const userOptions = ref([])
+const currentUser = ref(null)
+
+onMounted(async () => {
+  currentUser.value = decodeJwtPayload()
+
+  try {
+    const [rolesRes, permsRes, usersRes] = await Promise.allSettled([
+      api.getRoles(),
+      api.getPermissions(),
+      api.getUsers(),
+    ])
+    if (rolesRes.status === 'fulfilled') {
+      roleOptions.value = rolesRes.value.data.map(r => ({ label: `${r.role_name} (${r.role_code})`, value: r.id }))
+    }
+    if (permsRes.status === 'fulfilled') {
+      permOptions.value = permsRes.value.data.map(p => ({ label: `${p.permission_name} (${p.permission_code})`, value: p.id }))
+    }
+    if (usersRes.status === 'fulfilled') {
+      userOptions.value = usersRes.value.data.map(u => ({ label: `${u.username}${u.real_name ? ' - ' + u.real_name : ''}`, value: u.user_id }))
+    }
+  } catch (e) {
+    console.warn('加载下拉选项失败:', e)
+  }
+})
+
+// 用户/用户档案的智能获取（会员自动回退到查看自己）
+const fetchUsersSmart = () => {
+  return api.getUsers({ silent403: true }).catch(async (e) => {
+    if (e.response?.status === 403 && currentUser.value) {
+      const res = await api.getUserById(currentUser.value.user_id)
+      return { data: [res.data] }
+    }
+    throw e
+  })
+}
+
+const fetchProfilesSmart = () => {
+  return api.getUserProfiles({ silent403: true }).catch(async (e) => {
+    if (e.response?.status === 403 && currentUser.value) {
+      const res = await api.getUserProfileByUserId(currentUser.value.user_id)
+      return { data: [res.data] }
+    }
+    throw e
+  })
+}
 
 // 菜单分组定义
 const menuGroups = [
@@ -85,13 +154,29 @@ const menuGroups = [
 ]
 
 // 每个 key 对应的 API 和列定义
-const tableConfig = {
-  // 系统管理
+const tableConfig = computed(() => ({
+  // ========== 系统管理 ==========
   permissions: {
     label: '权限定义 (sys_permission)',
     fetchFn: api.getPermissions,
+    idProp: 'id',
+    getByIdFn: (id) => api.getPermissionById(id),
+    idSearchLabel: '输入权限 ID 查询',
     columns: [
       { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'permission_code', label: '权限标识符' },
+      { prop: 'permission_name', label: '权限名称' },
+      { prop: 'menu_path', label: '前端路由路径' },
+    ],
+    createFn: (data) => api.createPermission(data),
+    updateFn: (id, data) => api.updatePermission(id, data),
+    deleteFn: (id) => api.deletePermission(id),
+    createFields: [
+      { prop: 'permission_code', label: '权限标识符', required: true },
+      { prop: 'permission_name', label: '权限名称', required: true },
+      { prop: 'menu_path', label: '前端路由路径' },
+    ],
+    editFields: [
       { prop: 'permission_code', label: '权限标识符' },
       { prop: 'permission_name', label: '权限名称' },
       { prop: 'menu_path', label: '前端路由路径' },
@@ -100,8 +185,22 @@ const tableConfig = {
   roles: {
     label: '角色 (sys_role)',
     fetchFn: api.getRoles,
+    idProp: 'id',
+    getByIdFn: (id) => api.getRoleById(id),
+    idSearchLabel: '输入角色 ID 查询',
     columns: [
       { prop: 'id', label: 'ID', width: 80 },
+      { prop: 'role_code', label: '角色代码' },
+      { prop: 'role_name', label: '角色名称' },
+    ],
+    createFn: (data) => api.createRole(data),
+    updateFn: (id, data) => api.updateRole(id, data),
+    deleteFn: (id) => api.deleteRole(id),
+    createFields: [
+      { prop: 'role_code', label: '角色代码', required: true },
+      { prop: 'role_name', label: '角色名称', required: true },
+    ],
+    editFields: [
       { prop: 'role_code', label: '角色代码' },
       { prop: 'role_name', label: '角色名称' },
     ],
@@ -109,15 +208,26 @@ const tableConfig = {
   role_permissions: {
     label: '角色权限 (sys_role_permission)',
     fetchFn: api.getRolePermissions,
+    idProp: 'id',
     columns: [
       { prop: 'id', label: 'ID', width: 80 },
       { prop: 'role_id', label: '角色ID' },
       { prop: 'permission_id', label: '权限ID' },
     ],
+    createFn: (data) => api.createRolePermission(data),
+    deleteFn: (id) => api.deleteRolePermission(id),
+    createFields: [
+      { prop: 'role_id', label: '角色', type: 'select', required: true, options: roleOptions.value },
+      { prop: 'permission_id', label: '权限', type: 'select', required: true, options: permOptions.value },
+    ],
+    editFields: [],
   },
   users: {
     label: '用户 (sys_user)',
-    fetchFn: api.getUsers,
+    fetchFn: fetchUsersSmart,
+    idProp: 'user_id',
+    getByIdFn: (id) => api.getUserById(id),
+    idSearchLabel: '输入用户 ID 查询',
     columns: [
       { prop: 'user_id', label: 'ID', width: 80 },
       { prop: 'role_id', label: '角色ID', width: 80 },
@@ -127,10 +237,32 @@ const tableConfig = {
       { prop: 'phone', label: '手机号' },
       { prop: 'status', label: '状态', width: 80 },
     ],
+    createFn: (data) => api.createUser(data),
+    updateFn: (id, data) => api.updateUser(id, data),
+    deleteFn: (id) => api.deleteUser(id),
+    createFields: [
+      { prop: 'role_id', label: '角色', type: 'select', required: true, options: roleOptions.value },
+      { prop: 'username', label: '用户名', required: true },
+      { prop: 'password', label: '密码', type: 'password', required: true },
+      { prop: 'real_name', label: '真实姓名' },
+      { prop: 'phone', label: '手机号' },
+      { prop: 'status', label: '状态', type: 'select', default: 1, options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    ],
+    editFields: [
+      { prop: 'role_id', label: '角色', type: 'select', options: roleOptions.value },
+      { prop: 'username', label: '用户名' },
+      { prop: 'password', label: '新密码(留空不修改)', type: 'password' },
+      { prop: 'real_name', label: '真实姓名' },
+      { prop: 'phone', label: '手机号' },
+      { prop: 'status', label: '状态', type: 'select', options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    ],
   },
   user_profiles: {
     label: '用户档案 (sys_user_profile)',
-    fetchFn: api.getUserProfiles,
+    fetchFn: fetchProfilesSmart,
+    idProp: 'profile_id',
+    getByIdFn: (id) => api.getUserProfileByUserId(id),
+    idSearchLabel: '输入用户 ID 查询',
     columns: [
       { prop: 'profile_id', label: 'ID', width: 80 },
       { prop: 'user_id', label: '用户ID', width: 80 },
@@ -145,8 +277,36 @@ const tableConfig = {
       { prop: 'join_time', label: '入职时间' },
       { prop: 'expire_date', label: '到期日期' },
     ],
+    createFn: (data) => api.createUserProfile(data),
+    updateFn: (id, data) => api.updateUserProfile(id, data),
+    deleteFn: (id) => api.deleteUserProfile(id),
+    createFields: [
+      { prop: 'user_id', label: '用户', type: 'select', required: true, options: userOptions.value },
+      { prop: 'level', label: '等级', type: 'number', min: 0, max: 100 },
+      { prop: 'gender', label: '性别', type: 'select', options: [{ label: '男', value: 1 }, { label: '女', value: 2 }] },
+      { prop: 'birthday', label: '生日', type: 'date' },
+      { prop: 'height_cm', label: '身高(cm)', type: 'number' },
+      { prop: 'weight_kg', label: '体重(kg)', type: 'number' },
+      { prop: 'avatar_url', label: '头像URL' },
+      { prop: 'intro', label: '个人简介', type: 'textarea' },
+      { prop: 'create_time', label: '创建时间', type: 'datetime' },
+      { prop: 'join_time', label: '入职时间', type: 'datetime' },
+      { prop: 'expire_date', label: '到期日期', type: 'datetime' },
+    ],
+    editFields: [
+      { prop: 'level', label: '等级', type: 'number', min: 0, max: 100 },
+      { prop: 'gender', label: '性别', type: 'select', options: [{ label: '男', value: 1 }, { label: '女', value: 2 }] },
+      { prop: 'birthday', label: '生日', type: 'date' },
+      { prop: 'height_cm', label: '身高(cm)', type: 'number' },
+      { prop: 'weight_kg', label: '体重(kg)', type: 'number' },
+      { prop: 'avatar_url', label: '头像URL' },
+      { prop: 'intro', label: '个人简介', type: 'textarea' },
+      { prop: 'create_time', label: '创建时间', type: 'datetime' },
+      { prop: 'join_time', label: '入职时间', type: 'datetime' },
+      { prop: 'expire_date', label: '到期日期', type: 'datetime' },
+    ],
   },
-  // 门店管理
+  // ========== 门店管理 ==========
   provinces: {
     label: '省份区域 (t_store_province)',
     fetchFn: api.getProvinces,
@@ -184,7 +344,7 @@ const tableConfig = {
       { prop: 'created_at', label: '关联时间' },
     ],
   },
-  // 课程管理
+  // ========== 课程管理 ==========
   course_categories: {
     label: '课程分类 (t_course_category)',
     fetchFn: api.getCourseCategories,
@@ -220,7 +380,7 @@ const tableConfig = {
       { prop: 'created_at', label: '收藏时间' },
     ],
   },
-  // 动作库
+  // ========== 动作库 ==========
   action_categories: {
     label: '动作分类 (t_action_category)',
     fetchFn: api.getActionCategories,
@@ -252,10 +412,13 @@ const tableConfig = {
       { prop: 'created_at', label: '收藏时间' },
     ],
   },
-  // 内容管理
+  // ========== 内容管理 ==========
   slogans: {
     label: '标语 (t_slogan_info)',
     fetchFn: api.getSlogans,
+    idProp: 'slogan_id',
+    getByIdFn: (id) => api.getSloganById(id),
+    idSearchLabel: '输入标语 ID 查询',
     columns: [
       { prop: 'slogan_id', label: 'ID', width: 80 },
       { prop: 'slogan_name', label: '标语名称' },
@@ -263,10 +426,28 @@ const tableConfig = {
       { prop: 'slogan_image_url', label: '图片URL', width: 200 },
       { prop: 'status', label: '状态', width: 70 },
     ],
+    createFn: (data) => api.createSlogan(data),
+    updateFn: (id, data) => api.updateSlogan(id, data),
+    deleteFn: (id) => api.deleteSlogan(id),
+    createFields: [
+      { prop: 'slogan_name', label: '标语名称', required: true },
+      { prop: 'slogan_content', label: '标语内容', type: 'textarea', required: true },
+      { prop: 'slogan_image_url', label: '图片URL' },
+      { prop: 'status', label: '状态', type: 'select', default: 1, options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    ],
+    editFields: [
+      { prop: 'slogan_name', label: '标语名称' },
+      { prop: 'slogan_content', label: '标语内容', type: 'textarea' },
+      { prop: 'slogan_image_url', label: '图片URL' },
+      { prop: 'status', label: '状态', type: 'select', options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    ],
   },
   activities: {
     label: '赛事活动 (t_activity_event)',
     fetchFn: api.getActivities,
+    idProp: 'event_id',
+    getByIdFn: (id) => api.getActivityById(id),
+    idSearchLabel: '输入活动 ID 查询',
     columns: [
       { prop: 'event_id', label: 'ID', width: 80 },
       { prop: 'title', label: '标题' },
@@ -279,11 +460,34 @@ const tableConfig = {
       { prop: 'scale', label: '规模' },
       { prop: 'created_at', label: '创建时间' },
     ],
+    createFn: (data) => api.createActivity(data),
+    updateFn: (id, data) => api.updateActivity(id, data),
+    deleteFn: (id) => api.deleteActivity(id),
+    createFields: [
+      { prop: 'title', label: '标题', required: true },
+      { prop: 'event_date', label: '赛事日期', type: 'date', required: true },
+      { prop: 'location', label: '地点', required: true },
+      { prop: 'status', label: '状态', type: 'select', default: '预告', options: [{ label: '预告', value: '预告' }, { label: '早鸟票', value: '早鸟票' }, { label: '报名中', value: '报名中' }, { label: '进行中', value: '进行中' }, { label: '已结束', value: '已结束' }] },
+      { prop: 'description', label: '描述', type: 'textarea', required: true },
+      { prop: 'tags', label: '标签(逗号分隔)' },
+      { prop: 'prize', label: '奖金/奖品' },
+      { prop: 'scale', label: '规模' },
+    ],
+    editFields: [
+      { prop: 'title', label: '标题' },
+      { prop: 'event_date', label: '赛事日期', type: 'date' },
+      { prop: 'location', label: '地点' },
+      { prop: 'status', label: '状态', type: 'select', options: [{ label: '预告', value: '预告' }, { label: '早鸟票', value: '早鸟票' }, { label: '报名中', value: '报名中' }, { label: '进行中', value: '进行中' }, { label: '已结束', value: '已结束' }] },
+      { prop: 'description', label: '描述', type: 'textarea' },
+      { prop: 'tags', label: '标签(逗号分隔)' },
+      { prop: 'prize', label: '奖金/奖品' },
+      { prop: 'scale', label: '规模' },
+    ],
   },
-}
+}))
 
 const activeKey = ref('')
-const activeConfig = computed(() => tableConfig[activeKey.value] || null)
+const activeConfig = computed(() => tableConfig.value[activeKey.value] || null)
 
 function onSelect(key) {
   activeKey.value = key

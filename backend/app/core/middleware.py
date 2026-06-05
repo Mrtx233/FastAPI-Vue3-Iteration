@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.core.crypto import encrypt
 
 EXCLUDE_PREFIXES = ("/docs", "/redoc", "/openapi.json")
+EXCLUDE_PATHS = ("/api/system/login",)
 
 
 class EncryptResponseMiddleware(BaseHTTPMiddleware):
@@ -15,6 +16,8 @@ class EncryptResponseMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         if request.url.path.startswith(EXCLUDE_PREFIXES):
+            return response
+        if request.url.path in EXCLUDE_PATHS:
             return response
         content_type = response.headers.get("content-type", "")
         if "application/json" not in content_type:

@@ -5,10 +5,11 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import require_permission
 from app.core.database import get_db
 from .models import CourseCategory, Course, UserCourseFavorite
 
-router = APIRouter(prefix="/api/courses", tags=["课程管理"])
+router = APIRouter(prefix="/api/courses", tags=["课程管理"], dependencies=[Depends(require_permission('course:list'))])
 
 
 # ---------- Pydantic Schemas ----------

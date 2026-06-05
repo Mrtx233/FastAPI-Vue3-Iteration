@@ -36,7 +36,7 @@ app = FastAPI(title="Fitness Management API", version="0.2.0", lifespan=lifespan
 app.add_middleware(EncryptResponseMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

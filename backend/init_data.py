@@ -3,10 +3,8 @@
 为全部 16 张表写入标准测试数据
 """
 import pymysql
-from app.core.crypto import encrypt
+from app.core.auth import hash_password
 from app.core.config import settings
-
-KEY = settings.AES_SECRET_KEY
 
 conn = pymysql.connect(
     host=settings.DB_HOST,
@@ -36,22 +34,32 @@ try:
 
     # ========== 1. sys_permission 权限定义 ==========
     permissions = [
-        (1,  "user:list",     "用户列表",     "/system/users"),
-        (2,  "user:create",   "创建用户",     None),
-        (3,  "user:edit",     "编辑用户",     None),
-        (4,  "user:delete",   "删除用户",     None),
-        (5,  "role:list",     "角色列表",     "/system/roles"),
-        (6,  "role:manage",   "角色管理",     None),
-        (7,  "store:list",    "门店列表",     "/store/list"),
-        (8,  "store:manage",  "门店管理",     None),
-        (9,  "course:list",   "课程列表",     "/course/list"),
-        (10, "course:manage", "课程管理",     None),
-        (11, "action:list",   "动作列表",     "/action/list"),
-        (12, "action:manage", "动作管理",     None),
-        (13, "activity:list", "活动列表",     "/activity/list"),
-        (14, "activity:manage","活动管理",    None),
-        (15, "slogan:list",   "标语列表",     "/slogan/list"),
-        (16, "slogan:manage", "标语管理",     None),
+        (1,  "user:list",              "用户列表",       "/system/users"),
+        (2,  "user:create",            "创建用户",       None),
+        (3,  "user:edit",              "编辑用户",       None),
+        (4,  "user:delete",            "删除用户",       None),
+        (5,  "role:list",              "角色列表",       "/system/roles"),
+        (6,  "role:create",            "创建角色",       None),
+        (7,  "role:edit",              "编辑角色",       None),
+        (8,  "role:delete",            "删除角色",       None),
+        (9,  "permission:list",        "权限列表",       "/system/permissions"),
+        (10, "permission:create",      "创建权限",       None),
+        (11, "permission:edit",        "编辑权限",       None),
+        (12, "permission:delete",      "删除权限",       None),
+        (13, "role_permission:list",   "角色权限列表",   "/system/role-permissions"),
+        (14, "role_permission:create", "分配角色权限",   None),
+        (15, "role_permission:delete", "取消角色权限",   None),
+        (16, "user:view_own",          "查看自身信息",   None),
+        (17, "store:list",             "门店列表",       "/store/list"),
+        (18, "store:manage",           "门店管理",       None),
+        (19, "course:list",            "课程列表",       "/course/list"),
+        (20, "course:manage",          "课程管理",       None),
+        (21, "action:list",            "动作列表",       "/action/list"),
+        (22, "action:manage",          "动作管理",       None),
+        (23, "activity:list",          "活动列表",       "/activity/list"),
+        (24, "activity:manage",        "活动管理",       None),
+        (25, "slogan:list",            "标语列表",       "/slogan/list"),
+        (26, "slogan:manage",          "标语管理",       None),
     ]
     cur.executemany(
         "INSERT INTO sys_permission (id, permission_code, permission_name, menu_path) VALUES (%s,%s,%s,%s)",
@@ -73,15 +81,15 @@ try:
     # 超级管理员: 全部权限
     for pid in all_perm_ids:
         rp.append((1, pid))
-    # 运营管理员: 除 user:delete 外全部
+    # 运营管理员: 除 user:delete(4) 外全部
     for pid in all_perm_ids:
         if pid != 4:
             rp.append((2, pid))
-    # 教练: 课程 + 动作 + 活动查看
-    for pid in [9, 10, 11, 12, 13]:
+    # 教练: user:list + 课程CRUD + 动作CRUD + 活动/标语查看
+    for pid in [1, 19, 20, 21, 22, 23, 25]:
         rp.append((3, pid))
-    # 会员: 课程查看 + 动作查看
-    for pid in [9, 11]:
+    # 会员: user:view_own + 课程查看 + 动作查看 + 活动/标语查看
+    for pid in [16, 19, 21, 23, 25]:
         rp.append((4, pid))
     cur.executemany(
         "INSERT INTO sys_role_permission (role_id, permission_id) VALUES (%s,%s)", rp
@@ -89,14 +97,14 @@ try:
 
     # ========== 4. sys_user 用户 ==========
     users = [
-        (1, 1, "admin",    encrypt("admin123", KEY),  "张三", "13800000001", 1),
-        (2, 2, "operator", encrypt("oper123", KEY),    "李四", "13800000002", 1),
-        (3, 3, "coach_w",  encrypt("coach123", KEY),   "王五", "13800000003", 1),
-        (4, 3, "coach_z",  encrypt("coach123", KEY),   "赵六", "13800000004", 1),
-        (5, 4, "member_q", encrypt("member123", KEY),  "钱七", "13800000005", 1),
-        (6, 4, "member_s", encrypt("member123", KEY),  "孙八", "13800000006", 1),
-        (7, 4, "member_z", encrypt("member123", KEY),  "周九", "13800000007", 1),
-        (8, 4, "member_w", encrypt("member123", KEY),  "吴十", "13800000008", 1),
+        (1, 1, "admin",    hash_password("admin123"),   "张三", "13800000001", 1),
+        (2, 2, "operator", hash_password("oper123"),    "李四", "13800000002", 1),
+        (3, 3, "coach_w",  hash_password("coach123"),   "王五", "13800000003", 1),
+        (4, 3, "coach_z",  hash_password("coach123"),   "赵六", "13800000004", 1),
+        (5, 4, "member_q", hash_password("member123"),  "钱七", "13800000005", 1),
+        (6, 4, "member_s", hash_password("member123"),  "孙八", "13800000006", 1),
+        (7, 4, "member_z", hash_password("member123"),  "周九", "13800000007", 1),
+        (8, 4, "member_w", hash_password("member123"),  "吴十", "13800000008", 1),
     ]
     cur.executemany(
         "INSERT INTO sys_user (user_id, role_id, username, password, real_name, phone, status) VALUES (%s,%s,%s,%s,%s,%s,%s)",

@@ -5,10 +5,11 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auth import require_permission
 from app.core.database import get_db
 from .models import ActionCategory, Action, UserActionFavorite
 
-router = APIRouter(prefix="/api/actions", tags=["动作库"])
+router = APIRouter(prefix="/api/actions", tags=["动作库"], dependencies=[Depends(require_permission('action:list'))])
 
 
 # ---------- Pydantic Schemas ----------

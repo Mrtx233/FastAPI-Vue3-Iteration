@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "root"
     DB_NAME: str = "FastAPI_Vue3"
     AES_SECRET_KEY: str = "FastAPI2026SecureKey!@#$"
+    JWT_SECRET_KEY: str = "JWT_Fitness_2026_Secret!@#$"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_HOURS: int = 2
 
     @property
     def database_url(self) -> str:
