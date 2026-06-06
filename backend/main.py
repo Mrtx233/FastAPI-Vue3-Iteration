@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.database import engine
 from app.core.middleware import EncryptResponseMiddleware
@@ -22,6 +24,7 @@ from app.modules.activity.router import router as activity_router
 from app.modules.store.router import router as store_router
 from app.modules.course.router import router as course_router
 from app.modules.action.router import router as action_router
+from app.modules.upload.router import router as upload_router
 
 
 @asynccontextmanager
@@ -48,3 +51,9 @@ app.include_router(activity_router)
 app.include_router(store_router)
 app.include_router(course_router)
 app.include_router(action_router)
+app.include_router(upload_router)
+
+# 挂载上传文件静态服务（放在最后，不影响 API 路由）
+_uploads_dir = Path(__file__).parent / "uploads"
+_uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")

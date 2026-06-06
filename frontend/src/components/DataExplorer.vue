@@ -133,6 +133,11 @@
             show-password
             :placeholder="'请输入' + field.label"
           />
+          <!-- 文件上传 -->
+          <FileUpload
+            v-else-if="field.type === 'upload'"
+            v-model="formData[field.prop]"
+          />
           <!-- 默认文本 -->
           <el-input
             v-else
@@ -154,6 +159,7 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import FileUpload from './FileUpload.vue'
 
 const props = defineProps({
   fetchFn: { type: Function, required: true },

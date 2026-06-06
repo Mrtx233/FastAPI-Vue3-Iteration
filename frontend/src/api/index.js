@@ -120,29 +120,83 @@ export const deleteUserProfile = (id) => api.delete(`/api/system/user-profiles/$
 
 // ---------- 门店管理 ----------
 export const getProvinces = () => api.get('/api/stores/provinces')
-export const getStores = () => api.get('/api/stores/')
-export const getUserStores = () => api.get('/api/stores/user-stores')
-export const getUserStoresByUserId = (userId) => api.get(`/api/stores/user-stores/by-user/${userId}`)
+export const getProvinceById = (id) => api.get(`/api/stores/provinces/${id}`)
+export const createProvince = (data) => api.post('/api/stores/provinces', data)
+export const updateProvince = (id, data) => api.put(`/api/stores/provinces/${id}`, data)
+export const deleteProvince = (id) => api.delete(`/api/stores/provinces/${id}`)
+export const getStores = (config) => api.get('/api/stores/', config)
 export const getStoreById = (storeId) => api.get(`/api/stores/${storeId}`)
+export const createStore = (data) => api.post('/api/stores/', data)
+export const updateStore = (id, data) => api.put(`/api/stores/${id}`, data)
+export const deleteStore = (id) => api.delete(`/api/stores/${id}`)
+export const getUserStores = () => api.get('/api/stores/user-stores')
+export const getUserStoreById = (id) => api.get(`/api/stores/user-stores/${id}`)
+export const getUserStoresByUserId = (userId) => api.get(`/api/stores/user-stores/by-user/${userId}`)
+export const createUserStore = (data) => api.post('/api/stores/user-stores', data)
+export const updateUserStore = (id, data) => api.put(`/api/stores/user-stores/${id}`, data)
+export const deleteUserStore = (id) => api.delete(`/api/stores/user-stores/${id}`)
 
 // ---------- 课程管理 ----------
 export const getCourseCategories = () => api.get('/api/courses/categories')
-export const getCourses = () => api.get('/api/courses/')
+export const getCourseCategoryById = (id) => api.get(`/api/courses/categories/${id}`)
+export const createCourseCategory = (data) => api.post('/api/courses/categories', data)
+export const updateCourseCategory = (id, data) => api.put(`/api/courses/categories/${id}`, data)
+export const deleteCourseCategory = (id) => api.delete(`/api/courses/categories/${id}`)
+export const getCourses = (config) => api.get('/api/courses/', config)
+export const getCourseById = (id) => api.get(`/api/courses/${id}`)
 export const getCoursesByCategory = (categoryId) => api.get(`/api/courses/category/${categoryId}`)
+export const createCourse = (data) => api.post('/api/courses/', data)
+export const updateCourse = (id, data) => api.put(`/api/courses/${id}`, data)
+export const deleteCourse = (id) => api.delete(`/api/courses/${id}`)
 export const getMyFavoriteCourses = () => api.get('/api/courses/favorites/me')
 export const getCourseFavorites = () => api.get('/api/courses/favorites')
+export const getCourseFavoriteById = (id) => api.get(`/api/courses/favorites/${id}`)
+export const createCourseFavorite = (data) => api.post('/api/courses/favorites', data)
+export const updateCourseFavorite = (id, data) => api.put(`/api/courses/favorites/${id}`, data)
+export const deleteCourseFavorite = (id) => api.delete(`/api/courses/favorites/${id}`)
 
 // ---------- 动作库 ----------
 export const getActionCategories = () => api.get('/api/actions/categories')
-export const getActions = () => api.get('/api/actions/')
+export const getActionCategoryById = (id) => api.get(`/api/actions/categories/${id}`)
+export const createActionCategory = (data) => api.post('/api/actions/categories', data)
+export const updateActionCategory = (id, data) => api.put(`/api/actions/categories/${id}`, data)
+export const deleteActionCategory = (id) => api.delete(`/api/actions/categories/${id}`)
+export const getActions = (config) => api.get('/api/actions/', config)
+export const getActionById = (id) => api.get(`/api/actions/${id}`)
 export const getActionsByCategory = (categoryId) => api.get(`/api/actions/category/${categoryId}`)
+export const createAction = (data) => api.post('/api/actions/', data)
+export const updateAction = (id, data) => api.put(`/api/actions/${id}`, data)
+export const deleteAction = (id) => api.delete(`/api/actions/${id}`)
 export const getMyFavoriteActions = () => api.get('/api/actions/favorites/me')
 export const getActionFavorites = () => api.get('/api/actions/favorites')
+export const getActionFavoriteById = (id) => api.get(`/api/actions/favorites/${id}`)
+export const createActionFavorite = (data) => api.post('/api/actions/favorites', data)
+export const updateActionFavorite = (id, data) => api.put(`/api/actions/favorites/${id}`, data)
+export const deleteActionFavorite = (id) => api.delete(`/api/actions/favorites/${id}`)
+
+// ---------- 文件上传 ----------
+export const uploadFile = (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post('/api/upload/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+export const listUploadedFiles = () => api.get('/api/upload/')
+export const deleteUploadedFile = (filename) => api.delete(`/api/upload/${filename}`)
 
 // ---------- 标语 ----------
 export const getSlogans = () => api.get('/api/slogans/')
+export const getSloganById = (id) => api.get(`/api/slogans/${id}`)
+export const createSlogan = (data) => api.post('/api/slogans/', data)
+export const updateSlogan = (id, data) => api.put(`/api/slogans/${id}`, data)
+export const deleteSlogan = (id) => api.delete(`/api/slogans/${id}`)
 
 // ---------- 赛事活动 ----------
 export const getActivities = () => api.get('/api/activities/')
+export const getActivityById = (id) => api.get(`/api/activities/${id}`)
+export const createActivity = (data) => api.post('/api/activities/', data)
+export const updateActivity = (id, data) => api.put(`/api/activities/${id}`, data)
+export const deleteActivity = (id) => api.delete(`/api/activities/${id}`)
 
 export default api

@@ -108,5 +108,112 @@ export const fileChangeLogEntries: FileChangeLogEntry[] = [
       "docs/data/fileChangeLog.ts"
     ],
     aiOutput: "已在教练端和会员端个人中心新增关联门店模块，并按 user_id -> y_user_store.store_id -> t_store 链路查询展示门店信息。已运行后端源码语法检查和前端构建验证。"
+  },
+  {
+    id: "2026-06-06-1600",
+    time: "2026-06-06 16:00",
+    userInput: "用户可以看课程、看动作、可以收藏，但是管理员没法在系统里添加、修改或删除课程和动作。这一步你漏掉了 非常严重 赶紧补上",
+    requirementSummary: "管理员无法在 Dashboard 中对课程和动作本身进行增删改查操作（仅收藏表有 CRUD），属于严重遗漏。需要为课程表、课程分类表、动作表、动作分类表补全 POST/GET-by-ID/PUT/DELETE 端点，权限仅限超级管理员和运营。同时更新前端 API 函数、Dashboard 表格配置和权限脚本。",
+    changeSummary: [
+      "修改了 backend/app/modules/course/router.py，新增课程分类 CRUD（GET-by-ID、POST、PUT、DELETE）和课程 CRUD（GET-by-ID、POST、PUT、DELETE），权限分别为 course_category:* 和 course:*。",
+      "修改了 backend/app/modules/action/router.py，新增动作分类 CRUD 和动作 CRUD，权限分别为 action_category:* 和 action:*。",
+      "修改了 backend/init_data2.py，追加 12 条新权限（ID 48-59），全部分配给超级管理员和运营角色。",
+      "修改了 frontend/src/api/index.js，新增课程、课程分类、动作、动作分类的 CRUD API 函数。",
+      "修改了 frontend/src/components/Dashboard.vue，为 courses、course_categories、actions、action_categories 四个表格补充完整 CRUD 配置。"
+    ],
+    changedFiles: [
+      "backend/app/modules/course/router.py",
+      "backend/app/modules/action/router.py",
+      "backend/init_data2.py",
+      "frontend/src/api/index.js",
+      "frontend/src/components/Dashboard.vue"
+    ],
+    aiOutput: "已为课程表、课程分类表、动作表、动作分类表补全全部 CRUD 端点和前端 Dashboard 配置。新增 12 条权限（ID 48-59）写入 init_data2.py。前后端构建验证均通过。"
+  },
+  {
+    id: "2026-06-06-1645",
+    time: "2026-06-06 16:45",
+    userInput: "高优先级：开发一个通用的文件上传 API，打通前后端图片流转。",
+    requirementSummary: "开发通用文件上传功能，后端提供上传接口并挂载静态文件服务，前端创建拖拽上传组件并集成到 Dashboard 的图片字段中。存储方式选择本地磁盘（backend/uploads/），返回相对路径（/uploads/xxx.jpg）。需要将 Dashboard 中所有图片 URL 文本输入框替换为上传组件。",
+    changeSummary: [
+      "新增了 backend/app/modules/upload/ 模块（__init__.py + router.py），实现 POST 上传、GET 列表、DELETE 删除三个端点，支持 JPG/PNG/GIF/WebP/SVG/BMP，10MB 限制。",
+      "修改了 backend/main.py，注册上传路由并通过 StaticFiles 将 /uploads 挂载为静态文件目录。",
+      "修改了 backend/init_data2.py，追加 file:upload 权限（ID 60），分配给全部 4 个角色。",
+      "修改了 backend/requirements.txt，新增 python-multipart 依赖。",
+      "新增了 frontend/src/components/FileUpload.vue，通用拖拽上传组件，支持图片预览和 AES 解密。",
+      "修改了 frontend/src/api/index.js，新增 uploadFile、listUploadedFiles、deleteUploadedFile 函数。",
+      "修改了 frontend/src/components/DataExplorer.vue，新增 upload 字段类型支持。",
+      "修改了 frontend/src/components/Dashboard.vue，将全部图片 URL 字段替换为 upload 类型。"
+    ],
+    changedFiles: [
+      "backend/app/modules/upload/__init__.py",
+      "backend/app/modules/upload/router.py",
+      "backend/main.py",
+      "backend/init_data2.py",
+      "backend/requirements.txt",
+      "frontend/src/components/FileUpload.vue",
+      "frontend/src/components/DataExplorer.vue",
+      "frontend/src/api/index.js",
+      "frontend/src/components/Dashboard.vue"
+    ],
+    aiOutput: "已完成通用文件上传全链路开发：后端 POST 上传 + 静态文件服务 + 3 个管理端点；前端拖拽上传组件 + DataExplorer upload 字段类型 + Dashboard 全部图片字段替换为上传组件。el-upload 的 AES 解密已在 FileUpload 组件内独立处理。"
+  },
+  {
+    id: "2026-06-06-1730",
+    time: "2026-06-06 17:30",
+    userInput: "中优先级：检查现有 GET 列表接口是否都完美支持了分页 (Pagination)、关键字搜索和状态过滤（这部分在 API 路径里看不出来，需要确认代码实现）。",
+    requirementSummary: "审查所有 GET 列表接口的实际代码实现，确认是否支持分页、关键字搜索和状态过滤。根据审查结果和用户确认，对第一档核心业务表（用户、门店、课程、动作）实施分页+搜索+状态过滤改造。",
+    changeSummary: [
+      "新增了 backend/app/core/schemas.py，通用分页工具文件，包含 PaginatedResponse 模型和 paginated_query() 异步函数。",
+      "修改了 backend/app/modules/system/router.py，改造 GET /api/system/users 端点，新增 page/page_size/keyword/status 参数。",
+      "修改了 backend/app/modules/store/router.py，改造 GET /api/stores/ 端点，新增 page/page_size/keyword/is_operating 参数。",
+      "修改了 backend/app/modules/course/router.py，改造 GET /api/courses/ 端点，新增 page/page_size/keyword/status 参数。",
+      "修改了 backend/app/modules/action/router.py，改造 GET /api/actions/ 端点，新增 page/page_size/keyword 参数。",
+      "修改了 frontend/src/api/index.js，getStores/getCourses/getActions 新增 config 参数支持分页查询。",
+      "修改了 frontend/src/components/Dashboard.vue，新增 unwrapPaginated() 解包函数，4 个表格的 fetchFn 适配分页响应。",
+      "修改了 frontend/src/components/CoachPortal.vue，getCourses/getActions/getUsers 调用适配分页响应格式。",
+      "修改了 frontend/src/components/MemberPortal.vue，getCourses/getActions 调用适配分页响应格式。"
+    ],
+    changedFiles: [
+      "backend/app/core/schemas.py",
+      "backend/app/modules/system/router.py",
+      "backend/app/modules/store/router.py",
+      "backend/app/modules/course/router.py",
+      "backend/app/modules/action/router.py",
+      "frontend/src/api/index.js",
+      "frontend/src/components/Dashboard.vue",
+      "frontend/src/components/CoachPortal.vue",
+      "frontend/src/components/MemberPortal.vue"
+    ],
+    aiOutput: "审查发现全部 20+ 个 GET 列表接口均为裸 select().all()，无任何分页/搜索/过滤能力。已对 4 个核心业务表完成分页改造：创建了通用 paginated_query() 工具函数，统一返回 {items, total, page, page_size} 格式；前端通过 unwrapPaginated() 和 ?.items ?? .data 兼容写法保持现有功能正常。"
+  },
+  {
+    id: "2026-06-06-2100",
+    time: "2026-06-06 21:00",
+    userInput: "后端启动机会报错 你去检查一下 / 现在项目后端无法启动 会报错",
+    requirementSummary: "用户报告 python start.py 启动后端时立即退出（code=1），由于 start.py 在 Windows 上使用 CREATE_NEW_CONSOLE 创建独立控制台窗口，报错信息一闪而过不可见。需要排查后端无法启动的根因并修复。",
+    changeSummary: [
+      "排查发现 start.py 优先使用 backend/.venv/Scripts/python.exe，而此前安装 python-multipart 时只装到了根目录 .venv，导致 backend/.venv 缺少该依赖。",
+      "当 upload router 被导入时，from fastapi import File, UploadFile 触发 RuntimeError: Form data requires python-multipart，进程立即退出。",
+      "向 backend/.venv 补装 python-multipart==0.0.32，问题解决。",
+      "同时清理了端口 8001 被僵尸进程占用的问题。"
+    ],
+    changedFiles: [],
+    aiOutput: "根因定位为 backend/.venv 缺少 python-multipart 依赖。start.py 优先查找 backend/.venv，而该虚拟环境未安装文件上传所需的 python-multipart 包，导致 uvicorn 加载 upload router 时立即崩溃。已向 backend/.venv 补装依赖并验证启动成功（94 条路由注册、16 张表 DESCRIBE 通过、Application startup complete）。"
+  },
+  {
+    id: "2026-06-06-2130",
+    time: "2026-06-06 21:30",
+    userInput: "GET /api/system/users?page_size=999 返回 500 Internal Server Error",
+    requirementSummary: "用户在前端操作时，分页查询用户列表接口返回 500 错误。需要定位后端报错根因并修复。问题影响所有使用 paginated_query() 的分页端点（users、stores、courses、actions）。",
+    changeSummary: [
+      "修改了 backend/app/core/schemas.py，将 paginated_query() 的返回值从 PaginatedResponse(...) 实例改为普通 dict。",
+      "根因：PaginatedResponse Pydantic 模型的 items: list[Any] 字段存放 SQLAlchemy ORM 对象，Pydantic v2 序列化器遇到 list[Any] 中的未知类型时抛出 PydanticSerializationError。",
+      "改为返回普通 dict 后，FastAPI 的 jsonable_encoder 通过 ORM 对象的 __dict__ 属性正确完成序列化。"
+    ],
+    changedFiles: [
+      "backend/app/core/schemas.py"
+    ],
+    aiOutput: "通过在 8002 端口启动后端并构造 JWT token 直接调用接口复现了 500 错误。后端日志明确显示 PydanticSerializationError: Unable to serialize unknown type: SysUser。修复方式：将 paginated_query() 返回 PaginatedResponse 模型改为返回普通 dict，绕过 Pydantic v2 对 list[Any] 中 ORM 对象的序列化限制。修复后接口返回 200，所有分页端点均受影响。"
   }
 ];

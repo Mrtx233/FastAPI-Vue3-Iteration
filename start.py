@@ -98,3 +98,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# powershell -Command "Get-NetTCPConnection -LocalPort 8001 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }"

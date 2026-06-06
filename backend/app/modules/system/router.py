@@ -12,6 +12,7 @@ from app.core.auth import (
     require_permission, hash_password,
 )
 from app.core.database import get_db
+from app.core.schemas import PaginatedResponse, paginated_query
 from app.modules.system.models import (
     SysPermission,
     SysRole,
@@ -384,11 +385,22 @@ def _require_user_view():
     return checker
 
 
-@router.get("/users", response_model=list[SysUserSchema],
+@router.get("/users",
             dependencies=[Depends(require_permission('user:list'))])
-async def get_users(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(SysUser))
-    return result.scalars().all()
+async def get_users(
+    page: int = 1,
+    page_size: int = 20,
+    keyword: str | None = None,
+    status: int | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    return await paginated_query(
+        db, SysUser,
+        page=page, page_size=page_size,
+        keyword=keyword,
+        keyword_fields=[SysUser.username, SysUser.real_name],
+        status_field=SysUser.status, status_value=status,
+    )
 
 
 @router.get("/users/{user_id}", response_model=SysUserSchema,

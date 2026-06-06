@@ -338,9 +338,9 @@ async function loadHome() {
 
 async function loadCourses() {
   if (loaded.value.courses) return
-  const [catRes, cRes] = await Promise.allSettled([api.getCourseCategories(), api.getCourses()])
+  const [catRes, cRes] = await Promise.allSettled([api.getCourseCategories(), api.getCourses({ params: { page_size: 999 } })])
   if (catRes.status === 'fulfilled') courseCategories.value = catRes.value.data
-  if (cRes.status === 'fulfilled') courses.value = cRes.value.data
+  if (cRes.status === 'fulfilled') courses.value = cRes.value.data?.items ?? cRes.value.data
   loaded.value.courses = true
 }
 
@@ -348,11 +348,11 @@ async function refreshCourses() {
   const request = courseFilter.value === FAVORITE_FILTER
     ? api.getMyFavoriteCourses()
     : courseFilter.value === 0
-      ? api.getCourses()
+      ? api.getCourses({ params: { page_size: 999 } })
       : api.getCoursesByCategory(courseFilter.value)
   try {
     const res = await request
-    courses.value = res.data
+    courses.value = res.data?.items ?? res.data
   } catch {
     courses.value = []
   }
@@ -360,9 +360,9 @@ async function refreshCourses() {
 
 async function loadActions() {
   if (loaded.value.actions) return
-  const [catRes, aRes] = await Promise.allSettled([api.getActionCategories(), api.getActions()])
+  const [catRes, aRes] = await Promise.allSettled([api.getActionCategories(), api.getActions({ params: { page_size: 999 } })])
   if (catRes.status === 'fulfilled') actionCategories.value = catRes.value.data
-  if (aRes.status === 'fulfilled') actions.value = aRes.value.data
+  if (aRes.status === 'fulfilled') actions.value = aRes.value.data?.items ?? aRes.value.data
   loaded.value.actions = true
 }
 
@@ -370,11 +370,11 @@ async function refreshActions() {
   const request = actionFilter.value === FAVORITE_FILTER
     ? api.getMyFavoriteActions()
     : actionFilter.value === 0
-      ? api.getActions()
+      ? api.getActions({ params: { page_size: 999 } })
       : api.getActionsByCategory(actionFilter.value)
   try {
     const res = await request
-    actions.value = res.data
+    actions.value = res.data?.items ?? res.data
   } catch {
     actions.value = []
   }

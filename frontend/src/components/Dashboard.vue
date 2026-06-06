@@ -91,7 +91,7 @@ onMounted(async () => {
     const [rolesRes, permsRes, usersRes] = await Promise.allSettled([
       api.getRoles(),
       api.getPermissions(),
-      api.getUsers(),
+      api.getUsers({ params: { page_size: 999 } }),
     ])
     if (rolesRes.status === 'fulfilled') {
       roleOptions.value = rolesRes.value.data.map(r => ({ label: `${r.role_name} (${r.role_code})`, value: r.id }))
@@ -100,7 +100,8 @@ onMounted(async () => {
       permOptions.value = permsRes.value.data.map(p => ({ label: `${p.permission_name} (${p.permission_code})`, value: p.id }))
     }
     if (usersRes.status === 'fulfilled') {
-      userOptions.value = usersRes.value.data.map(u => ({ label: `${u.username}${u.real_name ? ' - ' + u.real_name : ''}`, value: u.user_id }))
+      const usersList = usersRes.value.data?.items ?? usersRes.value.data
+      userOptions.value = usersList.map(u => ({ label: `${u.username}${u.real_name ? ' - ' + u.real_name : ''}`, value: u.user_id }))
     }
   } catch (e) {
     console.warn('加载下拉选项失败:', e)
@@ -131,7 +132,7 @@ const canManageTable = (tableKey) => {
 // 用户/用户档案的智能获取（按权限直接选择请求方式，避免产生 403）
 const fetchUsersSmart = () => {
   if (hasUserListPerm()) {
-    return api.getUsers()
+    return api.getUsers({ params: { page_size: 999 } }).then(unwrapPaginated)
   }
   // 教练 / 会员：直接查看自己
   return api.getUserById(currentUser.value.user_id).then(res => ({ data: [res.data] }))
@@ -143,6 +144,14 @@ const fetchProfilesSmart = () => {
   }
   // 教练 / 会员：直接查看自己的档案
   return api.getUserProfileByUserId(currentUser.value.user_id).then(res => ({ data: [res.data] }))
+}
+
+// 分页响应解包：将 {items:[], total, page, page_size} 转为 {data: items}
+function unwrapPaginated(res) {
+  if (res.data && Array.isArray(res.data.items)) {
+    return { data: res.data.items }
+  }
+  return res
 }
 
 // 全部表格配置
@@ -312,16 +321,35 @@ const tableConfig = computed(() => ({
   provinces: {
     label: '省份区域 (t_store_province)',
     fetchFn: api.getProvinces,
+    idProp: 'province_id',
+    getByIdFn: (id) => api.getProvinceById(id),
+    idSearchLabel: '输入省份 ID 查询',
     columns: [
       { prop: 'province_id', label: 'ID', width: 80 },
       { prop: 'province_name', label: '省份名称' },
       { prop: 'center_lng', label: '中心经度' },
       { prop: 'center_lat', label: '中心纬度' },
     ],
+    createFn: canManageTable('provinces') ? ((data) => api.createProvince(data)) : null,
+    updateFn: canManageTable('provinces') ? ((id, data) => api.updateProvince(id, data)) : null,
+    deleteFn: canManageTable('provinces') ? ((id) => api.deleteProvince(id)) : null,
+    createFields: [
+      { prop: 'province_name', label: '省份名称', required: true },
+      { prop: 'center_lng', label: '中心经度', type: 'number' },
+      { prop: 'center_lat', label: '中心纬度', type: 'number' },
+    ],
+    editFields: [
+      { prop: 'province_name', label: '省份名称' },
+      { prop: 'center_lng', label: '中心经度', type: 'number' },
+      { prop: 'center_lat', label: '中心纬度', type: 'number' },
+    ],
   },
   stores: {
     label: '门店信息 (t_store)',
-    fetchFn: api.getStores,
+    fetchFn: () => api.getStores({ params: { page_size: 999 } }).then(unwrapPaginated),
+    idProp: 'store_id',
+    getByIdFn: (id) => api.getStoreById(id),
+    idSearchLabel: '输入门店 ID 查询',
     columns: [
       { prop: 'store_id', label: 'ID', width: 80 },
       { prop: 'store_name', label: '门店名称' },
@@ -334,10 +362,48 @@ const tableConfig = computed(() => ({
       { prop: 'business_hours', label: '营业时间' },
       { prop: 'is_operating', label: '营业', width: 70 },
     ],
+    createFn: canManageTable('stores') ? ((data) => api.createStore(data)) : null,
+    updateFn: canManageTable('stores') ? ((id, data) => api.updateStore(id, data)) : null,
+    deleteFn: canManageTable('stores') ? ((id) => api.deleteStore(id)) : null,
+    createFields: [
+      { prop: 'store_name', label: '门店名称', required: true },
+      { prop: 'store_type', label: '门店类型', type: 'select', required: true, options: [{ label: '旗舰店', value: 1 }, { label: '私教馆', value: 2 }, { label: '社区店', value: 3 }] },
+      { prop: 'province_id', label: '省份ID', type: 'number', required: true },
+      { prop: 'province_name', label: '省份名称' },
+      { prop: 'city', label: '城市' },
+      { prop: 'district', label: '区县' },
+      { prop: 'address', label: '详细地址' },
+      { prop: 'store_phone', label: '门店电话' },
+      { prop: 'store_image_url', label: '门店图片', type: 'upload' },
+      { prop: 'store_introduction', label: '门店介绍', type: 'textarea' },
+      { prop: 'business_hours', label: '营业时间' },
+      { prop: 'is_operating', label: '是否营业', type: 'select', default: 1, options: [{ label: '营业中', value: 1 }, { label: '停业', value: 0 }] },
+      { prop: 'store_lng', label: '经度', type: 'number' },
+      { prop: 'store_lat', label: '纬度', type: 'number' },
+    ],
+    editFields: [
+      { prop: 'store_name', label: '门店名称' },
+      { prop: 'store_type', label: '门店类型', type: 'select', options: [{ label: '旗舰店', value: 1 }, { label: '私教馆', value: 2 }, { label: '社区店', value: 3 }] },
+      { prop: 'province_id', label: '省份ID', type: 'number' },
+      { prop: 'province_name', label: '省份名称' },
+      { prop: 'city', label: '城市' },
+      { prop: 'district', label: '区县' },
+      { prop: 'address', label: '详细地址' },
+      { prop: 'store_phone', label: '门店电话' },
+      { prop: 'store_image_url', label: '门店图片', type: 'upload' },
+      { prop: 'store_introduction', label: '门店介绍', type: 'textarea' },
+      { prop: 'business_hours', label: '营业时间' },
+      { prop: 'is_operating', label: '是否营业', type: 'select', options: [{ label: '营业中', value: 1 }, { label: '停业', value: 0 }] },
+      { prop: 'store_lng', label: '经度', type: 'number' },
+      { prop: 'store_lat', label: '纬度', type: 'number' },
+    ],
   },
   user_stores: {
     label: '用户门店关联 (y_user_store)',
     fetchFn: api.getUserStores,
+    idProp: 'id',
+    getByIdFn: (id) => api.getUserStoreById(id),
+    idSearchLabel: '输入关联 ID 查询',
     columns: [
       { prop: 'id', label: 'ID', width: 80 },
       { prop: 'user_id', label: '用户ID' },
@@ -345,11 +411,27 @@ const tableConfig = computed(() => ({
       { prop: 'store_id', label: '门店ID' },
       { prop: 'created_at', label: '关联时间' },
     ],
+    createFn: canManageTable('user_stores') ? ((data) => api.createUserStore(data)) : null,
+    updateFn: canManageTable('user_stores') ? ((id, data) => api.updateUserStore(id, data)) : null,
+    deleteFn: canManageTable('user_stores') ? ((id) => api.deleteUserStore(id)) : null,
+    createFields: [
+      { prop: 'user_id', label: '用户', type: 'select', required: true, options: userOptions.value },
+      { prop: 'role_id', label: '角色', type: 'select', required: true, options: roleOptions.value },
+      { prop: 'store_id', label: '门店ID', type: 'number', required: true },
+    ],
+    editFields: [
+      { prop: 'user_id', label: '用户', type: 'select', options: userOptions.value },
+      { prop: 'role_id', label: '角色', type: 'select', options: roleOptions.value },
+      { prop: 'store_id', label: '门店ID', type: 'number' },
+    ],
   },
   // ========== 课程管理 ==========
   course_categories: {
     label: '课程分类 (t_course_category)',
     fetchFn: api.getCourseCategories,
+    idProp: 'category_id',
+    getByIdFn: (id) => api.getCourseCategoryById(id),
+    idSearchLabel: '输入分类 ID 查询',
     columns: [
       { prop: 'category_id', label: 'ID', width: 80 },
       { prop: 'category_name', label: '分类名称' },
@@ -357,10 +439,28 @@ const tableConfig = computed(() => ({
       { prop: 'description', label: '描述' },
       { prop: 'status', label: '状态', width: 70 },
     ],
+    createFn: canManageTable('course_categories') ? ((data) => api.createCourseCategory(data)) : null,
+    updateFn: canManageTable('course_categories') ? ((id, data) => api.updateCourseCategory(id, data)) : null,
+    deleteFn: canManageTable('course_categories') ? ((id) => api.deleteCourseCategory(id)) : null,
+    createFields: [
+      { prop: 'category_name', label: '分类名称', required: true },
+      { prop: 'category_url', label: '分类图片', type: 'upload' },
+      { prop: 'description', label: '描述', type: 'textarea' },
+      { prop: 'status', label: '状态', type: 'select', default: 1, options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    ],
+    editFields: [
+      { prop: 'category_name', label: '分类名称' },
+      { prop: 'category_url', label: '分类图片', type: 'upload' },
+      { prop: 'description', label: '描述', type: 'textarea' },
+      { prop: 'status', label: '状态', type: 'select', options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    ],
   },
   courses: {
     label: '课程 (t_course)',
-    fetchFn: api.getCourses,
+    fetchFn: () => api.getCourses({ params: { page_size: 999 } }).then(unwrapPaginated),
+    idProp: 'course_id',
+    getByIdFn: (id) => api.getCourseById(id),
+    idSearchLabel: '输入课程 ID 查询',
     columns: [
       { prop: 'course_id', label: 'ID', width: 80 },
       { prop: 'course_name', label: '课程名称' },
@@ -368,56 +468,148 @@ const tableConfig = computed(() => ({
       { prop: 'course_difficulty', label: '难度', width: 70 },
       { prop: 'duration_minutes', label: '时长(分)', width: 80 },
       { prop: 'max_participants', label: '最大人数', width: 80 },
+      { prop: 'schedule_info', label: '排课信息' },
       { prop: 'description', label: '描述' },
       { prop: 'status', label: '状态', width: 70 },
+    ],
+    createFn: canManageTable('courses') ? ((data) => api.createCourse(data)) : null,
+    updateFn: canManageTable('courses') ? ((id, data) => api.updateCourse(id, data)) : null,
+    deleteFn: canManageTable('courses') ? ((id) => api.deleteCourse(id)) : null,
+    createFields: [
+      { prop: 'course_name', label: '课程名称', required: true },
+      { prop: 'category_id', label: '分类ID', type: 'number', required: true },
+      { prop: 'course_difficulty', label: '难度(1-5)', type: 'number', min: 1, max: 5 },
+      { prop: 'duration_minutes', label: '时长(分钟)', type: 'number' },
+      { prop: 'max_participants', label: '最大人数', type: 'number' },
+      { prop: 'schedule_info', label: '排课信息' },
+      { prop: 'description', label: '描述', type: 'textarea' },
+      { prop: 'status', label: '状态', type: 'select', default: 1, options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    ],
+    editFields: [
+      { prop: 'course_name', label: '课程名称' },
+      { prop: 'category_id', label: '分类ID', type: 'number' },
+      { prop: 'course_difficulty', label: '难度(1-5)', type: 'number', min: 1, max: 5 },
+      { prop: 'duration_minutes', label: '时长(分钟)', type: 'number' },
+      { prop: 'max_participants', label: '最大人数', type: 'number' },
+      { prop: 'schedule_info', label: '排课信息' },
+      { prop: 'description', label: '描述', type: 'textarea' },
+      { prop: 'status', label: '状态', type: 'select', options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
     ],
   },
   course_favorites: {
     label: '课程收藏 (y_user_course_favorite)',
     fetchFn: api.getCourseFavorites,
+    idProp: 'favorite_id',
+    getByIdFn: (id) => api.getCourseFavoriteById(id),
+    idSearchLabel: '输入收藏 ID 查询',
     columns: [
       { prop: 'favorite_id', label: 'ID', width: 80 },
       { prop: 'user_id', label: '用户ID' },
       { prop: 'course_id', label: '课程ID' },
       { prop: 'created_at', label: '收藏时间' },
     ],
+    createFn: canManageTable('course_favorites') ? ((data) => api.createCourseFavorite(data)) : null,
+    updateFn: canManageTable('course_favorites') ? ((id, data) => api.updateCourseFavorite(id, data)) : null,
+    deleteFn: canManageTable('course_favorites') ? ((id) => api.deleteCourseFavorite(id)) : null,
+    createFields: [
+      { prop: 'course_id', label: '课程ID', type: 'number', required: true },
+    ],
+    editFields: [
+      { prop: 'course_id', label: '课程ID', type: 'number' },
+    ],
   },
   // ========== 动作库 ==========
   action_categories: {
     label: '动作分类 (t_action_category)',
     fetchFn: api.getActionCategories,
+    idProp: 'category_id',
+    getByIdFn: (id) => api.getActionCategoryById(id),
+    idSearchLabel: '输入分类 ID 查询',
     columns: [
       { prop: 'category_id', label: 'ID', width: 80 },
       { prop: 'category_name', label: '分类名称' },
       { prop: 'category_image_url', label: '图片URL', width: 200 },
     ],
+    createFn: canManageTable('action_categories') ? ((data) => api.createActionCategory(data)) : null,
+    updateFn: canManageTable('action_categories') ? ((id, data) => api.updateActionCategory(id, data)) : null,
+    deleteFn: canManageTable('action_categories') ? ((id) => api.deleteActionCategory(id)) : null,
+    createFields: [
+      { prop: 'category_name', label: '分类名称', required: true },
+      { prop: 'category_image_url', label: '分类图片', type: 'upload' },
+    ],
+    editFields: [
+      { prop: 'category_name', label: '分类名称' },
+      { prop: 'category_image_url', label: '分类图片', type: 'upload' },
+    ],
   },
   actions: {
     label: '动作 (t_action)',
-    fetchFn: api.getActions,
+    fetchFn: () => api.getActions({ params: { page_size: 999 } }).then(unwrapPaginated),
+    idProp: 'action_id',
+    getByIdFn: (id) => api.getActionById(id),
+    idSearchLabel: '输入动作 ID 查询',
     columns: [
       { prop: 'action_id', label: 'ID', width: 80 },
       { prop: 'action_name', label: '动作名称' },
       { prop: 'category_id', label: '分类ID', width: 80 },
       { prop: 'action_difficulty', label: '难度', width: 70 },
+      { prop: 'action_image_url', label: '图片URL', width: 160 },
       { prop: 'applicable_equipment', label: '适用器械' },
       { prop: 'applicable_store_type', label: '适用门店', width: 80 },
+    ],
+    createFn: canManageTable('actions') ? ((data) => api.createAction(data)) : null,
+    updateFn: canManageTable('actions') ? ((id, data) => api.updateAction(id, data)) : null,
+    deleteFn: canManageTable('actions') ? ((id) => api.deleteAction(id)) : null,
+    createFields: [
+      { prop: 'action_name', label: '动作名称', required: true },
+      { prop: 'category_id', label: '分类ID', type: 'number', required: true },
+      { prop: 'action_difficulty', label: '难度(1-5)', type: 'number', min: 1, max: 5 },
+      { prop: 'action_image_url', label: '动作图片', type: 'upload' },
+      { prop: 'action_steps', label: '动作步骤', type: 'textarea' },
+      { prop: 'attention_points', label: '注意事项', type: 'textarea' },
+      { prop: 'applicable_equipment', label: '适用器械' },
+      { prop: 'applicable_store_type', label: '适用门店类型', type: 'select', options: [{ label: '旗舰店', value: 1 }, { label: '私教馆', value: 2 }, { label: '社区店', value: 3 }] },
+    ],
+    editFields: [
+      { prop: 'action_name', label: '动作名称' },
+      { prop: 'category_id', label: '分类ID', type: 'number' },
+      { prop: 'action_difficulty', label: '难度(1-5)', type: 'number', min: 1, max: 5 },
+      { prop: 'action_image_url', label: '动作图片', type: 'upload' },
+      { prop: 'action_steps', label: '动作步骤', type: 'textarea' },
+      { prop: 'attention_points', label: '注意事项', type: 'textarea' },
+      { prop: 'applicable_equipment', label: '适用器械' },
+      { prop: 'applicable_store_type', label: '适用门店类型', type: 'select', options: [{ label: '旗舰店', value: 1 }, { label: '私教馆', value: 2 }, { label: '社区店', value: 3 }] },
     ],
   },
   action_favorites: {
     label: '动作收藏 (y_user_action_favorite)',
     fetchFn: api.getActionFavorites,
+    idProp: 'favorite_id',
+    getByIdFn: (id) => api.getActionFavoriteById(id),
+    idSearchLabel: '输入收藏 ID 查询',
     columns: [
       { prop: 'favorite_id', label: 'ID', width: 80 },
       { prop: 'user_id', label: '用户ID' },
       { prop: 'action_id', label: '动作ID' },
       { prop: 'created_at', label: '收藏时间' },
     ],
+    createFn: canManageTable('action_favorites') ? ((data) => api.createActionFavorite(data)) : null,
+    updateFn: canManageTable('action_favorites') ? ((id, data) => api.updateActionFavorite(id, data)) : null,
+    deleteFn: canManageTable('action_favorites') ? ((id) => api.deleteActionFavorite(id)) : null,
+    createFields: [
+      { prop: 'action_id', label: '动作ID', type: 'number', required: true },
+    ],
+    editFields: [
+      { prop: 'action_id', label: '动作ID', type: 'number' },
+    ],
   },
   // ========== 内容管理 ==========
   slogans: {
     label: '标语 (t_slogan_info)',
     fetchFn: api.getSlogans,
+    idProp: 'slogan_id',
+    getByIdFn: (id) => api.getSloganById(id),
+    idSearchLabel: '输入标语 ID 查询',
     columns: [
       { prop: 'slogan_id', label: 'ID', width: 80 },
       { prop: 'slogan_name', label: '标语名称' },
@@ -425,10 +617,28 @@ const tableConfig = computed(() => ({
       { prop: 'slogan_image_url', label: '图片URL', width: 200 },
       { prop: 'status', label: '状态', width: 70 },
     ],
+    createFn: canManageTable('slogans') ? ((data) => api.createSlogan(data)) : null,
+    updateFn: canManageTable('slogans') ? ((id, data) => api.updateSlogan(id, data)) : null,
+    deleteFn: canManageTable('slogans') ? ((id) => api.deleteSlogan(id)) : null,
+    createFields: [
+      { prop: 'slogan_name', label: '标语名称', required: true },
+      { prop: 'slogan_content', label: '标语内容', required: true, type: 'textarea' },
+      { prop: 'slogan_image_url', label: '标语图片', type: 'upload' },
+      { prop: 'status', label: '状态', type: 'select', default: 1, options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    ],
+    editFields: [
+      { prop: 'slogan_name', label: '标语名称' },
+      { prop: 'slogan_content', label: '标语内容', type: 'textarea' },
+      { prop: 'slogan_image_url', label: '标语图片', type: 'upload' },
+      { prop: 'status', label: '状态', type: 'select', options: [{ label: '启用', value: 1 }, { label: '禁用', value: 0 }] },
+    ],
   },
   activities: {
     label: '赛事活动 (t_activity_event)',
     fetchFn: api.getActivities,
+    idProp: 'event_id',
+    getByIdFn: (id) => api.getActivityById(id),
+    idSearchLabel: '输入活动 ID 查询',
     columns: [
       { prop: 'event_id', label: 'ID', width: 80 },
       { prop: 'title', label: '标题' },
@@ -440,6 +650,29 @@ const tableConfig = computed(() => ({
       { prop: 'prize', label: '奖金/奖品' },
       { prop: 'scale', label: '规模' },
       { prop: 'created_at', label: '创建时间' },
+    ],
+    createFn: canManageTable('activities') ? ((data) => api.createActivity(data)) : null,
+    updateFn: canManageTable('activities') ? ((id, data) => api.updateActivity(id, data)) : null,
+    deleteFn: canManageTable('activities') ? ((id) => api.deleteActivity(id)) : null,
+    createFields: [
+      { prop: 'title', label: '标题', required: true },
+      { prop: 'event_date', label: '活动日期', type: 'date', required: true },
+      { prop: 'location', label: '地点', required: true },
+      { prop: 'status', label: '状态', type: 'select', required: true, options: [{ label: '预告', value: '预告' }, { label: '报名中', value: '报名中' }, { label: '早鸟票', value: '早鸟票' }, { label: '进行中', value: '进行中' }, { label: '已结束', value: '已结束' }] },
+      { prop: 'description', label: '描述', type: 'textarea', required: true },
+      { prop: 'tags', label: '标签(逗号分隔)' },
+      { prop: 'prize', label: '奖金/奖品' },
+      { prop: 'scale', label: '规模' },
+    ],
+    editFields: [
+      { prop: 'title', label: '标题' },
+      { prop: 'event_date', label: '活动日期', type: 'date' },
+      { prop: 'location', label: '地点' },
+      { prop: 'status', label: '状态', type: 'select', options: [{ label: '预告', value: '预告' }, { label: '报名中', value: '报名中' }, { label: '早鸟票', value: '早鸟票' }, { label: '进行中', value: '进行中' }, { label: '已结束', value: '已结束' }] },
+      { prop: 'description', label: '描述', type: 'textarea' },
+      { prop: 'tags', label: '标签(逗号分隔)' },
+      { prop: 'prize', label: '奖金/奖品' },
+      { prop: 'scale', label: '规模' },
     ],
   },
 }))
