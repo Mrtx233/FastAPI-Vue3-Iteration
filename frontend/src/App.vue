@@ -1,14 +1,18 @@
 <template>
-  <el-container style="min-height: 100vh">
+  <el-container class="app-shell">
     <el-header v-if="showHeader" class="app-header">
-      <span class="logo">Fitness Management</span>
+      <div class="brand-lockup">
+        <span class="brand-mark">FM</span>
+        <div>
+          <span class="logo">Fitness Management</span>
+          <span class="logo-sub">训练与运营中枢</span>
+        </div>
+      </div>
       <div v-if="userInfo" class="header-right">
         <el-dropdown @command="handleCommand">
           <span class="user-info">
-            {{ userInfo.username }}
-            <el-tag size="small" type="info" style="margin-left: 6px">
-              {{ roleLabel }}
-            </el-tag>
+            <span class="user-name">{{ userInfo.username }}</span>
+            <el-tag size="small" class="role-tag">{{ roleLabel }}</el-tag>
           </span>
           <template #dropdown>
             <el-dropdown-menu>
@@ -65,17 +69,109 @@ function handleCommand(cmd) {
 </script>
 
 <style>
-body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.app-shell {
+  min-height: 100dvh;
+  background: transparent;
+}
+
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
-  padding: 0 24px;
-  height: 60px;
+  height: 64px;
+  padding: 0 28px;
+  background: rgba(255, 255, 255, 0.88);
+  border-bottom: 1px solid rgba(220, 230, 222, 0.9);
+  backdrop-filter: blur(18px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
-.logo { font-size: 18px; font-weight: 700; color: #409eff; }
-.header-right { display: flex; align-items: center; }
-.user-info { cursor: pointer; font-size: 14px; color: #606266; }
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: #fff;
+  background: linear-gradient(135deg, #14211c 0%, #1f7a4d 100%);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 12px 28px rgba(31, 122, 77, 0.2);
+}
+
+.logo {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--fm-ink);
+  line-height: 1.1;
+}
+
+.logo-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--fm-muted);
+  line-height: 1.1;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 4px 6px 4px 12px;
+  border: 1px solid var(--fm-border);
+  border-radius: 999px;
+  color: var(--fm-ink);
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(20, 33, 28, 0.06);
+}
+
+.user-name {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.role-tag {
+  margin-left: 0;
+  color: var(--fm-accent-strong);
+  background: var(--fm-accent-soft);
+  border-color: transparent;
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    padding: 0 14px;
+  }
+
+  .logo-sub {
+    display: none;
+  }
+
+  .user-name {
+    max-width: 96px;
+  }
+}
 </style>

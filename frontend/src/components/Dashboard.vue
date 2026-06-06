@@ -1,11 +1,15 @@
 <template>
-  <el-container style="height: calc(100vh - 60px)">
+  <el-container class="dashboard-shell">
     <!-- 侧边栏 -->
-    <el-aside width="220px" style="border-right: 1px solid #e4e7ed; background: #fafafa">
-      <el-menu :default-active="activeKey" @select="onSelect" style="border: none">
+    <el-aside width="248px" class="dashboard-aside">
+      <div class="aside-title">
+        <span>数据目录</span>
+        <small>{{ menuGroups.length }} 组模块</small>
+      </div>
+      <el-menu :default-active="activeKey" @select="onSelect" class="dashboard-menu">
         <el-sub-menu v-for="group in menuGroups" :key="group.key" :index="group.key">
           <template #title>
-            <span style="font-weight: 600">{{ group.label }}</span>
+            <span class="menu-group-title">{{ group.label }}</span>
           </template>
           <el-menu-item v-for="item in group.children" :key="item.key" :index="item.key">
             {{ item.label }}
@@ -15,9 +19,15 @@
     </el-aside>
 
     <!-- 内容区 -->
-    <el-main style="padding: 20px">
+    <el-main class="dashboard-main">
       <template v-if="activeKey">
-        <h3 style="margin: 0 0 16px; color: #303133">{{ activeConfig.label }}</h3>
+        <div class="dashboard-heading">
+          <div>
+            <span class="heading-kicker">当前数据表</span>
+            <h3>{{ activeConfig.label }}</h3>
+          </div>
+          <span class="heading-pill">{{ activeKey }}</span>
+        </div>
         <DataExplorer
           :fetch-fn="activeConfig.fetchFn"
           :columns="activeConfig.columns"
@@ -32,7 +42,11 @@
           :key="activeKey"
         />
       </template>
-      <el-empty v-else description="请从左侧选择一个数据表" />
+      <div v-else class="dashboard-empty">
+        <div class="empty-mark">FM</div>
+        <h3>选择一个数据表开始管理</h3>
+        <p>左侧目录按照系统、门店、课程、动作和内容组织，适合快速巡检和维护业务数据。</p>
+      </div>
     </el-main>
   </el-container>
 </template>
@@ -437,3 +451,163 @@ function onSelect(key) {
   activeKey.value = key
 }
 </script>
+
+<style scoped>
+.dashboard-shell {
+  min-height: calc(100dvh - 64px);
+  background: transparent;
+}
+
+.dashboard-aside {
+  padding: 18px 14px;
+  border-right: 1px solid var(--fm-border);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(14px);
+}
+
+.aside-title {
+  padding: 8px 10px 16px;
+  border-bottom: 1px solid var(--fm-border);
+  margin-bottom: 12px;
+}
+
+.aside-title span,
+.aside-title small {
+  display: block;
+}
+
+.aside-title span {
+  color: var(--fm-ink);
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.aside-title small {
+  margin-top: 4px;
+  color: var(--fm-muted);
+  font-size: 12px;
+}
+
+.dashboard-menu {
+  border: none;
+  background: transparent;
+}
+
+.dashboard-menu :deep(.el-sub-menu__title),
+.dashboard-menu :deep(.el-menu-item) {
+  height: 42px;
+  border-radius: 10px;
+  margin: 4px 0;
+}
+
+.dashboard-menu :deep(.el-menu-item.is-active) {
+  color: var(--fm-accent-strong);
+  background: var(--fm-accent-soft);
+  font-weight: 800;
+}
+
+.menu-group-title {
+  font-weight: 800;
+}
+
+.dashboard-main {
+  min-width: 0;
+  padding: 24px;
+}
+
+.dashboard-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.heading-kicker {
+  display: block;
+  color: var(--fm-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dashboard-heading h3 {
+  margin: 5px 0 0;
+  color: var(--fm-ink);
+  font-size: 24px;
+  line-height: 1.15;
+}
+
+.heading-pill {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--fm-accent-strong);
+  background: var(--fm-accent-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dashboard-empty {
+  min-height: calc(100dvh - 160px);
+  border: 1px dashed #bfd1c4;
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(239, 247, 241, 0.92));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+}
+
+.empty-mark {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #14211c, #1f7a4d);
+  font-weight: 900;
+}
+
+.dashboard-empty h3 {
+  margin: 0;
+  color: var(--fm-ink);
+  font-size: 22px;
+}
+
+.dashboard-empty p {
+  max-width: 420px;
+  margin: 10px 0 0;
+  color: var(--fm-muted);
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .dashboard-shell {
+    display: block;
+  }
+
+  .dashboard-aside {
+    width: 100% !important;
+    border-right: none;
+    border-bottom: 1px solid var(--fm-border);
+  }
+
+  .dashboard-main {
+    padding: 18px 14px;
+  }
+
+  .dashboard-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>

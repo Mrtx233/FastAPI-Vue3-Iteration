@@ -1,1 +1,120 @@
-body { margin: 0; }
+:root {
+  --fm-bg: #f4f7f3;
+  --fm-surface: #ffffff;
+  --fm-surface-soft: #eef4ec;
+  --fm-ink: #14211c;
+  --fm-muted: #66746d;
+  --fm-border: #dce6de;
+  --fm-accent: #1f7a4d;
+  --fm-accent-strong: #145c39;
+  --fm-accent-soft: #e1f2e8;
+  --fm-warning: #b7791f;
+  --fm-danger: #b42318;
+  --fm-radius-sm: 8px;
+  --fm-radius-md: 12px;
+  --fm-radius-lg: 18px;
+  --fm-shadow-soft: 0 18px 50px rgba(20, 33, 28, 0.08);
+  --fm-shadow-card: 0 10px 28px rgba(20, 33, 28, 0.08);
+
+  --el-color-primary: #1f7a4d;
+  --el-color-primary-light-3: #3e9868;
+  --el-color-primary-light-5: #72b58d;
+  --el-color-primary-light-7: #b4dac3;
+  --el-color-primary-light-8: #cde8d6;
+  --el-color-primary-light-9: #e7f4eb;
+  --el-color-primary-dark-2: #145c39;
+  --el-border-radius-base: 8px;
+  --el-border-color: #dce6de;
+  --el-text-color-primary: #14211c;
+  --el-text-color-regular: #4b5c54;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--fm-bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  color: var(--fm-ink);
+  background:
+    linear-gradient(180deg, rgba(225, 242, 232, 0.52), transparent 240px),
+    var(--fm-bg);
+  font-family:
+    "Segoe UI",
+    "Microsoft YaHei",
+    "PingFang SC",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
+  letter-spacing: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+#app {
+  min-height: 100dvh;
+}
+
+.el-button {
+  font-weight: 650;
+  border-radius: var(--fm-radius-sm);
+}
+
+.el-button:active {
+  transform: translateY(1px);
+}
+
+.el-button--primary {
+  box-shadow: 0 10px 22px rgba(31, 122, 77, 0.18);
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  border-radius: var(--fm-radius-sm);
+  box-shadow: 0 0 0 1px var(--fm-border) inset;
+}
+
+.el-card,
+.el-dialog,
+.el-table {
+  border-radius: var(--fm-radius-md);
+}
+
+.el-table {
+  --el-table-header-bg-color: #f7faf6;
+  --el-table-header-text-color: #2b3a33;
+  --el-table-row-hover-bg-color: #eff7f1;
+  border: 1px solid var(--fm-border);
+}
+
+.el-table th.el-table__cell {
+  font-weight: 700;
+}
+
+.el-tag {
+  border-radius: 999px;
+  font-weight: 650;
+}
+
+.el-radio-button__inner {
+  font-weight: 650;
+}
+
+@media (max-width: 720px) {
+  .el-message-box,
+  .el-dialog {
+    width: calc(100vw - 32px) !important;
+  }
+}

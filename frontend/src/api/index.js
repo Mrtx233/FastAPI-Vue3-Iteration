@@ -122,15 +122,21 @@ export const deleteUserProfile = (id) => api.delete(`/api/system/user-profiles/$
 export const getProvinces = () => api.get('/api/stores/provinces')
 export const getStores = () => api.get('/api/stores/')
 export const getUserStores = () => api.get('/api/stores/user-stores')
+export const getUserStoresByUserId = (userId) => api.get(`/api/stores/user-stores/by-user/${userId}`)
+export const getStoreById = (storeId) => api.get(`/api/stores/${storeId}`)
 
 // ---------- 课程管理 ----------
 export const getCourseCategories = () => api.get('/api/courses/categories')
 export const getCourses = () => api.get('/api/courses/')
+export const getCoursesByCategory = (categoryId) => api.get(`/api/courses/category/${categoryId}`)
+export const getMyFavoriteCourses = () => api.get('/api/courses/favorites/me')
 export const getCourseFavorites = () => api.get('/api/courses/favorites')
 
 // ---------- 动作库 ----------
 export const getActionCategories = () => api.get('/api/actions/categories')
 export const getActions = () => api.get('/api/actions/')
+export const getActionsByCategory = (categoryId) => api.get(`/api/actions/category/${categoryId}`)
+export const getMyFavoriteActions = () => api.get('/api/actions/favorites/me')
 export const getActionFavorites = () => api.get('/api/actions/favorites')
 
 // ---------- 标语 ----------

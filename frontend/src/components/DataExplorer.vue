@@ -1,15 +1,15 @@
 <template>
-  <div>
+  <div class="data-explorer">
     <!-- 工具栏 -->
-    <div v-if="crudEnabled || getByIdFn" style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
-      <el-button v-if="crudEnabled" type="primary" @click="openCreateDialog">
-        + 新增
+    <div v-if="crudEnabled || getByIdFn" class="explorer-toolbar">
+      <el-button v-if="createFn" type="primary" @click="openCreateDialog">
+        新增
       </el-button>
       <template v-if="getByIdFn">
         <el-input
           v-model="searchId"
           :placeholder="idSearchLabel"
-          style="width: 180px"
+          class="id-search"
           clearable
           @keyup.enter="handleSearchById"
           @clear="handleSearchClear"
@@ -20,39 +20,46 @@
     </div>
 
     <!-- 数据表格 -->
-    <el-table
-      :data="tableData"
-      v-loading="loading"
-      stripe
-      style="width: 100%"
-      max-height="600"
-      :empty-text="emptyText"
-    >
-      <el-table-column
-        v-for="col in columns"
-        :key="col.prop"
-        :prop="col.prop"
-        :label="col.label"
-        :min-width="col.width || 140"
-        show-overflow-tooltip
-      />
-      <!-- 操作列 -->
-      <el-table-column v-if="crudEnabled" label="操作" width="160" fixed="right">
-        <template #default="{ row }">
-          <el-button size="small" @click="openEditDialog(row)">编辑</el-button>
-          <el-popconfirm
-            title="确认删除此记录？"
-            confirm-button-text="确定"
-            cancel-button-text="取消"
-            @confirm="handleDelete(row)"
-          >
-            <template #reference>
-              <el-button size="small" type="danger">删除</el-button>
-            </template>
-          </el-popconfirm>
-        </template>
-      </el-table-column>
-    </el-table>
+    <div class="table-panel">
+      <div class="table-summary">
+        <span>{{ isSearchMode ? '查询结果' : '全部记录' }}</span>
+        <strong>{{ tableData.length }}</strong>
+      </div>
+      <el-table
+        :data="tableData"
+        v-loading="loading"
+        stripe
+        class="explorer-table"
+        max-height="600"
+        :empty-text="emptyText"
+      >
+        <el-table-column
+          v-for="col in columns"
+          :key="col.prop"
+          :prop="col.prop"
+          :label="col.label"
+          :min-width="col.width || 140"
+          show-overflow-tooltip
+        />
+        <!-- 操作列 -->
+        <el-table-column v-if="updateFn || deleteFn" label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <el-button v-if="updateFn" size="small" @click="openEditDialog(row)">编辑</el-button>
+            <el-popconfirm
+              v-if="deleteFn"
+              title="确认删除此记录？"
+              confirm-button-text="确定"
+              cancel-button-text="取消"
+              @confirm="handleDelete(row)"
+            >
+              <template #reference>
+                <el-button size="small" type="danger">删除</el-button>
+              </template>
+            </el-popconfirm>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog
@@ -60,8 +67,9 @@
       :title="isEdit ? '编辑' : '新增'"
       width="520px"
       destroy-on-close
+      class="data-dialog"
     >
-      <el-form :model="formData" label-width="110px" style="max-height: 60vh; overflow-y: auto">
+      <el-form :model="formData" label-width="110px" class="data-form">
         <el-form-item
           v-for="field in activeFields"
           :key="field.prop"
@@ -286,3 +294,79 @@ watch(() => props.fetchFn, loadData)
 
 defineExpose({ reload: loadData })
 </script>
+
+<style scoped>
+.data-explorer {
+  min-width: 0;
+}
+
+.explorer-toolbar {
+  margin-bottom: 14px;
+  padding: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  border: 1px solid var(--fm-border);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 8px 24px rgba(20, 33, 28, 0.05);
+}
+
+.id-search {
+  width: 220px;
+}
+
+.table-panel {
+  overflow: hidden;
+  border: 1px solid var(--fm-border);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--fm-shadow-card);
+}
+
+.table-summary {
+  min-height: 50px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--fm-border);
+  background: #fbfdfb;
+}
+
+.table-summary span {
+  color: var(--fm-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.table-summary strong {
+  color: var(--fm-accent-strong);
+  font-size: 20px;
+}
+
+.explorer-table {
+  width: 100%;
+  border: none;
+  border-radius: 0;
+}
+
+.data-form {
+  max-height: 60vh;
+  padding-right: 8px;
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .explorer-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .explorer-toolbar :deep(.el-button),
+  .id-search {
+    width: 100%;
+  }
+}
+</style>

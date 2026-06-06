@@ -59,6 +59,25 @@ async def list_actions(db: AsyncSession = Depends(get_db)):
     return result.scalars().all()
 
 
+@router.get("/category/{category_id}", response_model=list[ActionOut])
+async def list_actions_by_category(category_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Action).where(Action.category_id == category_id))
+    return result.scalars().all()
+
+
+@router.get("/favorites/me", response_model=list[ActionOut])
+async def list_my_favorite_actions(
+    current_user: dict = Depends(require_permission('action:list')),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Action)
+        .join(UserActionFavorite, UserActionFavorite.action_id == Action.action_id)
+        .where(UserActionFavorite.user_id == current_user["user_id"])
+    )
+    return result.scalars().all()
+
+
 @router.get("/favorites", response_model=list[UserActionFavoriteOut])
 async def list_favorites(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(UserActionFavorite))
